@@ -28,20 +28,15 @@ void StereoCamera::init(vector<int> camIndices)
         cout << "Opening camera " << idx << endl;
         _cameras.emplace_back(VideoCapture());
         _cameras[_cameras.size() - 1].open(idx);
-        _cameras[_cameras.size() - 1].set(CV_CAP_PROP_FRAME_WIDTH, 1280);
-        _cameras[_cameras.size() - 1].set(CV_CAP_PROP_FRAME_HEIGHT, 720);
+        //_cameras[_cameras.size() - 1].set(CV_CAP_PROP_FRAME_WIDTH, 1280);
+        //_cameras[_cameras.size() - 1].set(CV_CAP_PROP_FRAME_HEIGHT, 720);
     }
 
     _frames.resize(camIndices.size());
     _calibrations.resize(camIndices.size());
 
-    //_stereoMatcher = make_shared<StereoBM>(StereoBM::BASIC_PRESET, 48, 21);
-    _stereoMatcher = make_shared<StereoSGBM>(0, 64, 11, 8*3*3*11, 32*3*3*11);
-}
-
-/*************/
-StereoCamera::~StereoCamera()
-{
+    _stereoMatcher = cuda::createStereoBM(64, 11);
+    _d_frames.resize(2);
 }
 
 /*************/
@@ -73,7 +68,7 @@ void StereoCamera::computeDisparity()
         _rmaps.resize(_frames.size());
         Size imageSize = _frames[0].size();
 
-        for (int i = 0; i < _frames.size(); ++i)
+        for (unsigned int i = 0; i < _frames.size(); ++i)
         {
             _rmaps[i].resize(2);
             initUndistortRectifyMap(_calibrations[i].cameraMatrix, _calibrations[i].distCoeffs,
@@ -85,27 +80,32 @@ void StereoCamera::computeDisparity()
     }
 
     _remappedFrames.resize(_frames.size());
-    //vector<Mat> remappedFrames8U(_frames.size());
-    vector<Mat> remappedFramesHalf(_frames.size());
-    for (int i = 0; i < _frames.size(); ++i)
-    {
+    for (unsigned int i = 0; i < _frames.size(); ++i)
         remap(_frames[i], _remappedFrames[i], _rmaps[i][0], _rmaps[i][1], CV_INTER_LINEAR);
-        resize(_remappedFrames[i], remappedFramesHalf[i], Size(), 0.5, 0.5, cv::INTER_LINEAR);
-    }
 
-    (*_stereoMatcher)(remappedFramesHalf[0], remappedFramesHalf[1], _disparityMap);
+    _d_frames.resize(_frames.size());
+    for (unsigned int i = 0; i < _frames.size(); ++i)
+    {
+        cv::Mat gray;
+        cv::cvtColor(_remappedFrames[i], gray, COLOR_BGR2GRAY);
+        _d_frames[i].upload(gray);
+    }
+    _d_disparity = cuda::GpuMat(_frames[0].size(), CV_8U);
+
+    _stereoMatcher->compute(_d_frames[0], _d_frames[1], _d_disparity);
+    _d_disparity.download(_disparityMap);
 }
 
 /*************/
 bool StereoCamera::grab()
 {
     bool state = true;
-    for (int i = 0; i < _cameras.size(); ++i)
+    for (unsigned int i = 0; i < _cameras.size(); ++i)
         state &= _cameras[i].grab();
     if (!state)
         return state;
 
-    for (int i = 0; i < _cameras.size(); ++i)
+    for (unsigned int i = 0; i < _cameras.size(); ++i)
         state &= _cameras[i].retrieve(_frames[i], 0);
 
     return state;
@@ -132,7 +132,7 @@ bool StereoCamera::loadConfiguration(string intrinsic, string extrinsic)
     
     try
     {
-        for (int i = 1; i <= _cameras.size(); ++i)
+        for (unsigned int i = 1; i <= _cameras.size(); ++i)
         {
             fileIntrinsic["M" + to_string(i)] >> _calibrations[i - 1].cameraMatrix;
             fileIntrinsic["D" + to_string(i)] >> _calibrations[i - 1].distCoeffs;
@@ -148,6 +148,8 @@ bool StereoCamera::loadConfiguration(string intrinsic, string extrinsic)
     }
 
     _calibrationLoaded = true;
+
+    return true;
 }
 
 /*************/
@@ -165,11 +167,11 @@ vector<Mat>& StereoCamera::retrieveRemapped()
 /*************/
 void StereoCamera::saveToDisk()
 {
-    auto now = chrono::system_clock::now();
-    int timestamp = (now - _startTime).count() / 1e6;
-    for (int i = 0; i < _frames.size(); ++i)
+    //auto now = chrono::system_clock::now();
+    //int timestamp = (now - _startTime).count() / 1e6;
+    for (unsigned int i = 0; i < _frames.size(); ++i)
     {
-        string filename = "grabs/camera_" + to_string(i) + "_" + to_string(_captureIndex) + ".jpg";
+        string filename = "grabs/camera_" + to_string(_captureIndex) + "_" + to_string(i) + ".jpg";
         imwrite(filename, _frames[i], {CV_IMWRITE_JPEG_QUALITY, 95});
     }
     _captureIndex++;

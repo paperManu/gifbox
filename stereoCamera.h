@@ -3,7 +3,14 @@
 #include <chrono>
 #include <memory>
 #include <vector>
-#include <opencv2/opencv.hpp>
+
+#include <opencv2/core.hpp>
+#include <opencv2/core/utility.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/cudastereo.hpp>
+
 
 /*************/
 class StereoCamera
@@ -11,7 +18,6 @@ class StereoCamera
     public:
         StereoCamera();
         StereoCamera(std::vector<int> camIndices);
-        ~StereoCamera();
 
         void computeDisparity();
         bool grab();
@@ -25,14 +31,17 @@ class StereoCamera
     private:
         std::chrono::system_clock::time_point _startTime;
         std::vector<cv::VideoCapture> _cameras;
+
+        // Frames, on host and client
         std::vector<cv::Mat> _frames;
         std::vector<cv::Mat> _remappedFrames;
+        std::vector<cv::cuda::GpuMat> _d_frames;
+        cv::cuda::GpuMat _d_disparity;
 
         std::vector<std::vector<cv::Mat>> _rmaps;
         cv::Mat _disparityMap;
 
-        //std::shared_ptr<cv::StereoBM> _stereoMatcher;
-        std::shared_ptr<cv::StereoSGBM> _stereoMatcher;
+        cv::Ptr<cv::StereoMatcher> _stereoMatcher;
 
         unsigned int _captureIndex {0};
 

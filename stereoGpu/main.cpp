@@ -20,7 +20,7 @@
 using namespace std;
 using namespace cv;
 
-string v4l2dev = "/dev/video1";
+string v4l2dev = "/dev/video0";
 int v4l2sink = -1;
 
 /*************/
