@@ -26,13 +26,16 @@ V4l2Output::V4l2Output(int width, int height, string device)
 
     v4l2format.fmt.pix.width = width;
     v4l2format.fmt.pix.height = height;
-    v4l2format.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB24;
+    v4l2format.fmt.pix.pixelformat = V4L2_PIX_FMT_BGR24;
     v4l2format.fmt.pix.sizeimage = width * height * 3;
     if (ioctl(_sink, VIDIOC_S_FMT, v4l2format) < 0)
     {
         cout << "Error while setting v4l2 loopback device format: " << strerror(errno) << endl;
         return;
     }
+
+    _width = width;
+    _height = height;
     
     cout << "V4L2 loopback device successfully opened" << endl;
 }

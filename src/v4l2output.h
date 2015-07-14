@@ -47,7 +47,12 @@ class V4l2Output
 
         bool writeToDevice(void* data, size_t size);
 
+        inline int getWidth() {return _width;}
+        inline int getHeight() {return _height;}
+
     private:
+        int _width {0};
+        int _height {0};
         std::string _device {};
         int _sink {-1};
 };

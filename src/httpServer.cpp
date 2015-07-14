@@ -1,7 +1,10 @@
 #include "httpServer.h"
 
+#include <atomic>
+#include <condition_variable>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <signal.h>
 
 using namespace std;
@@ -654,28 +657,51 @@ RequestHandler::RequestHandler()
 void RequestHandler::handleRequest(const Request& req, Reply& rep)
 {
     unique_lock<mutex> lock(_queueMutex);
-    if (req.uri == "/shot")
-        _commandQueue.push_back(Command::shot);
-    else if (req.uri == "/save")
-        _commandQueue.push_back(Command::save);
-    else if (req.uri == "/stopSave")
-        _commandQueue.push_back(Command::stopSave);
+    if (req.uri == "/start")
+        _commandQueue.push_back(Command::start);
+    else if (req.uri == "/record")
+        _commandQueue.push_back(Command::record);
+    else if (req.uri == "/stop")
+        _commandQueue.push_back(Command::stop);
     else if (req.uri == "/quit")
         _commandQueue.push_back(Command::quit);
     else
+    {
         cout << "No command associated to URI " << req.uri << endl;
+        rep = Reply::stockReply(Reply::bad_request);
+        return;
+    }
+
+    condition_variable cv;
+    atomic_bool replyState {false};
+
+    auto replyFunc = [&](bool reply) -> void{
+        cv.notify_all();
+        replyState = reply;
+    };
+
+    _commandReturnFuncQueue.push_back(replyFunc);
+    cv.wait_for(lock, chrono::milliseconds(2000));
+
+    if (replyState)
+        rep = Reply::stockReply(Reply::ok);
+    else
+        rep = Reply::stockReply(Reply::internal_server_error);
 }
 
 /*************/
-RequestHandler::Command RequestHandler::getNextCommand()
+pair<RequestHandler::Command, RequestHandler::ReturnFunction> RequestHandler::getNextCommand()
 {
     unique_lock<mutex> lock(_queueMutex);
     if (_commandQueue.size() == 0)
-        return Command::nop;
+        return make_pair(Command::nop, [](bool){});
 
     Command command = _commandQueue[0];
     _commandQueue.pop_front();
-    return command;
+
+    auto func = _commandReturnFuncQueue[0];
+    _commandReturnFuncQueue.pop_front();
+    return make_pair(command, func);
 }
 
 /*************/

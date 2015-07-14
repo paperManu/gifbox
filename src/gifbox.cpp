@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <thread>
 #include <vector>
@@ -32,6 +33,13 @@
 #include "v4l2output.h"
 
 using namespace std;
+
+struct State
+{
+    bool run {true};
+    bool sendToV4l2 {false};
+    bool record {false};
+};
 
 /*************/
 int main(int argc, char** argv)
@@ -62,17 +70,13 @@ int main(int argc, char** argv)
     stereoCamera.loadConfiguration("intrinsics.yml", "extrinsics.yml");
 
     // Prepare v4l2 loopback
-    V4l2Output v4l2sink(640, 480, "/dev/video1");
-    if (!v4l2sink)
-        return 1;
+    unique_ptr<V4l2Output> v4l2sink;
 
     // And the layer merger
     LayerMerger layerMerger;
 
-    cv::Mat disparityColor;
-
-    bool continueLoop = true;
-    while(continueLoop)
+    State state;
+    while(state.run)
     {
         // Do camera stuff
         stereoCamera.grab();
@@ -80,10 +84,6 @@ int main(int argc, char** argv)
 
         stereoCamera.computeDisparity();
         cv::Mat disparity = stereoCamera.retrieveDisparity();
-        if (disparityColor.total() == 0)
-            disparityColor = cv::Mat(frames[0].size(), frames[0].type());
-        cv::applyColorMap(disparity, disparityColor, cv::COLORMAP_JET);
-        v4l2sink.writeToDevice(disparityColor.data, disparityColor.total() * disparityColor.elemSize());
 
         vector<cv::Mat> remappedFrames = stereoCamera.retrieveRemapped();
 
@@ -108,18 +108,32 @@ int main(int argc, char** argv)
 
         cv::imshow("Result", finalImage);
 
-        // Handle HTTP requests
-        RequestHandler::Command cmd;
-        while ((cmd = requestHandler->getNextCommand()) != RequestHandler::Command::nop)
+        // Write the result to v4l2
+        if (state.sendToV4l2)
         {
-            if (cmd == RequestHandler::Command::quit)
-                continueLoop = false;
-            else if (cmd == RequestHandler::Command::save)
+            if (!v4l2sink || finalImage.rows != v4l2sink->getHeight() || finalImage.cols != v4l2sink->getWidth())
+                v4l2sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video1"));
+            if (*v4l2sink)
+                v4l2sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
+        }
+
+        // Handle HTTP requests
+        pair<RequestHandler::Command, RequestHandler::ReturnFunction> cmd;
+        while ((cmd = requestHandler->getNextCommand()).first != RequestHandler::Command::nop)
+        {
+            if (cmd.first == RequestHandler::Command::quit)
+                state.run = false;
+            else if (cmd.first == RequestHandler::Command::record)
                 layerMerger.setSaveMerge(true, "/tmp/gifbox_result");
-            else if (cmd == RequestHandler::Command::stopSave)
+            else if (cmd.first == RequestHandler::Command::stop)
+            {
                 layerMerger.setSaveMerge(false);
-            else if (cmd == RequestHandler::Command::shot)
-                stereoCamera.saveToDisk();
+                state.sendToV4l2 = false;
+            }
+            else if (cmd.first == RequestHandler::Command::start)
+                state.sendToV4l2 = true;
+
+            cmd.second(true);
         }
 
         // Handle keyboard
@@ -131,7 +145,7 @@ int main(int argc, char** argv)
                 cout << "Pressed key: " << key << endl;
             break;
         case 27: // Escape
-            continueLoop = false;
+            state.run = false;
             break;
         case 's': // Save images to disk
             stereoCamera.saveToDisk();

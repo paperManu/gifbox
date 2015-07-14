@@ -21,9 +21,11 @@
 #define HTTPSERVER_H
 
 #include <deque>
+#include <functional>
 #include <mutex>
 #include <set>
 #include <string>
+#include <utility>
 
 #include <boost/asio.hpp>
 
@@ -180,22 +182,25 @@ class ConnectionManager
 class RequestHandler
 {
     public:
+        using ReturnFunction = std::function<void(bool)>;
+
         enum Command
         {
             nop,
-            save,
-            stopSave,
-            shot,
+            record,
+            start,
+            stop,
             quit
         };
 
         explicit RequestHandler();
         void handleRequest(const Request& req, Reply& rep);
-        Command getNextCommand();
+        std::pair<Command, ReturnFunction> getNextCommand();
 
     private:
         static bool urlDecode(const std::string& in, std::string& out);
         std::deque<Command> _commandQueue;
+        std::deque<ReturnFunction> _commandReturnFuncQueue;
         std::mutex _queueMutex;
 };
 
