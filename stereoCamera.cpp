@@ -79,7 +79,7 @@ void StereoCamera::computeDisparity()
 
     _remappedFrames.resize(_frames.size());
     for (unsigned int i = 0; i < _frames.size(); ++i)
-        remap(_frames[i], _remappedFrames[i], _rmaps[i][0], _rmaps[i][1], CV_INTER_LINEAR);
+        remap(_frames[i], _remappedFrames[i], _rmaps[i][0], _rmaps[i][1], cv::INTER_LINEAR);
 
     _d_frames.resize(_frames.size());
     for (unsigned int i = 0; i < _frames.size(); ++i)

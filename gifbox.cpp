@@ -78,6 +78,7 @@ int main(int argc, char** argv)
         cv::Mat disparity = stereoCamera.retrieveDisparity();
         if (disparityColor.total() == 0)
             disparityColor = cv::Mat(frames[0].size(), frames[0].type());
+        cv::applyColorMap(disparity, disparityColor, cv::COLORMAP_JET);
         v4l2sink.writeToDevice(disparityColor.data, disparityColor.total() * disparityColor.elemSize());
 
         vector<cv::Mat> remappedFrames = stereoCamera.retrieveRemapped();
@@ -93,8 +94,26 @@ int main(int argc, char** argv)
 
         // Get current film frame
         auto frame = films[0].getCurrentFrame();
-        cv::imshow("film_front", frame[0]);
-        cv::imshow("film_back", frame[1]);
+        auto frameMask = films[0].getCurrentMask();
+
+        // Merge images
+        cv::Mat cameraMask;
+        // Background layer
+        cv::Mat finalImage = frame[1].clone();
+        cv::threshold(disparity, cameraMask, 48, 255, cv::THRESH_BINARY);
+        cv::Mat tmpMat, tmpMask;
+        // Between BG and FG
+        cv::resize(cameraMask, tmpMask, finalImage.size(), cv::INTER_LINEAR);
+        cv::resize(remappedFrames[0], tmpMat, finalImage.size(), cv::INTER_LINEAR);
+        tmpMat.copyTo(finalImage, tmpMask);
+        // Foreground layer
+        frame[0].copyTo(finalImage, frameMask[0]);
+        // Foregrounder (!) layer
+        cv::threshold(disparity, cameraMask, 60, 255, cv::THRESH_BINARY);
+        cv::resize(cameraMask, tmpMask, finalImage.size(), cv::INTER_LINEAR);
+        tmpMat.copyTo(finalImage, tmpMask);
+
+        cv::imshow("Result", finalImage);
 
         // Handle HTTP requests
         RequestHandler::Command cmd = requestHandler->getNextCommand();

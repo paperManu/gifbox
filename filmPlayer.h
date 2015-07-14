@@ -26,6 +26,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 #define PLANE_BASENAME "plan"
 #define FRAME_BASENAME "Frame"
@@ -46,6 +47,7 @@ class FilmPlayer
 
         void start();
         std::vector<cv::Mat>& getCurrentFrame();
+        std::vector<cv::Mat>& getCurrentMask() {return _masks[_lastIndex];}
 
     private:
         std::string _path {};
@@ -54,7 +56,9 @@ class FilmPlayer
         float _fps {10.f};
 
         bool _ready {false};
+        int _lastIndex {0};
         std::vector<std::vector<cv::Mat>> _frames;
+        std::vector<std::vector<cv::Mat>> _masks; // frameNbr - 1 masks total, one between each layer
         std::chrono::milliseconds _startTime;
 };
 
