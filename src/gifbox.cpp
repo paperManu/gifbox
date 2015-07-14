@@ -31,6 +31,7 @@
 #include "layerMerger.h"
 #include "stereoCamera.h"
 #include "v4l2output.h"
+#include "values.h"
 
 using namespace std;
 
@@ -133,7 +134,7 @@ int main(int argc, char** argv)
             else if (cmd.first == RequestHandler::Command::start)
                 state.sendToV4l2 = true;
 
-            cmd.second(true);
+            cmd.second(true, {});
         }
 
         // Handle keyboard

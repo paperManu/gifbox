@@ -169,7 +169,7 @@ void StereoCamera::saveToDisk()
     //int timestamp = (now - _startTime).count() / 1e6;
     for (unsigned int i = 0; i < _frames.size(); ++i)
     {
-        string filename = "grabs/camera_" + to_string(_captureIndex) + "_" + to_string(i) + ".jpg";
+        string filename = "/tmp/camera_" + to_string(_captureIndex) + "_" + to_string(i) + ".jpg";
         imwrite(filename, _frames[i], {CV_IMWRITE_JPEG_QUALITY, 95});
         cout << "Save images in " << filename << endl;
     }

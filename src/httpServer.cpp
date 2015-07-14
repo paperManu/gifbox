@@ -675,7 +675,7 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
     condition_variable cv;
     atomic_bool replyState {false};
 
-    auto replyFunc = [&](bool reply) -> void{
+    auto replyFunc = [&](bool reply, Values) -> void{
         cv.notify_all();
         replyState = reply;
     };
@@ -694,7 +694,7 @@ pair<RequestHandler::Command, RequestHandler::ReturnFunction> RequestHandler::ge
 {
     unique_lock<mutex> lock(_queueMutex);
     if (_commandQueue.size() == 0)
-        return make_pair(Command::nop, [](bool){});
+        return make_pair(Command::nop, ReturnFunction());
 
     Command command = _commandQueue[0];
     _commandQueue.pop_front();

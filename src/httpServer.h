@@ -29,6 +29,8 @@
 
 #include <boost/asio.hpp>
 
+#include "values.h"
+
 /*************/
 class ConnectionManager;
 class RequestHandler;
@@ -182,7 +184,7 @@ class ConnectionManager
 class RequestHandler
 {
     public:
-        using ReturnFunction = std::function<void(bool)>;
+        using ReturnFunction = std::function<void(bool, Values)>;
 
         enum Command
         {
