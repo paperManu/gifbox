@@ -27,6 +27,7 @@
 
 #include "filmPlayer.h"
 #include "httpServer.h"
+#include "layerMerger.h"
 #include "stereoCamera.h"
 #include "v4l2output.h"
 
@@ -65,6 +66,9 @@ int main(int argc, char** argv)
     if (!v4l2sink)
         return 1;
 
+    // And the layer merger
+    LayerMerger layerMerger;
+
     cv::Mat disparityColor;
 
     bool continueLoop = true;
@@ -96,22 +100,11 @@ int main(int argc, char** argv)
         auto frame = films[0].getCurrentFrame();
         auto frameMask = films[0].getCurrentMask();
 
-        // Merge images
-        cv::Mat cameraMask;
-        // Background layer
-        cv::Mat finalImage = frame[1].clone();
-        cv::threshold(disparity, cameraMask, 48, 255, cv::THRESH_BINARY);
-        cv::Mat tmpMat, tmpMask;
-        // Between BG and FG
-        cv::resize(cameraMask, tmpMask, finalImage.size(), cv::INTER_LINEAR);
-        cv::resize(remappedFrames[0], tmpMat, finalImage.size(), cv::INTER_LINEAR);
-        tmpMat.copyTo(finalImage, tmpMask);
-        // Foreground layer
-        frame[0].copyTo(finalImage, frameMask[0]);
-        // Foregrounder (!) layer
-        cv::threshold(disparity, cameraMask, 60, 255, cv::THRESH_BINARY);
-        cv::resize(cameraMask, tmpMask, finalImage.size(), cv::INTER_LINEAR);
-        tmpMat.copyTo(finalImage, tmpMask);
+        cv::Mat cameraMaskBG, cameraMaskFG;
+        cv::threshold(disparity, cameraMaskBG, 48, 255, cv::THRESH_BINARY);
+        cv::threshold(disparity, cameraMaskFG, 60, 255, cv::THRESH_BINARY);
+        auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], frames[0], frame[0], frames[0]},
+                                                           {cameraMaskBG, frameMask[0], cameraMaskFG});
 
         cv::imshow("Result", finalImage);
 

@@ -4,6 +4,7 @@ gifengine_SOURCES = \
 	gifbox.cpp \
 	filmPlayer.cpp \
 	httpServer.cpp \
+	layerMerger.cpp \
 	stereoCamera.cpp \
 	v4l2output.cpp
 
