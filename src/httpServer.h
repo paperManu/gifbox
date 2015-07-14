@@ -183,6 +183,8 @@ class RequestHandler
         enum Command
         {
             nop,
+            save,
+            stopSave,
             shot,
             quit
         };

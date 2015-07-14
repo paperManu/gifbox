@@ -656,6 +656,10 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
     unique_lock<mutex> lock(_queueMutex);
     if (req.uri == "/shot")
         _commandQueue.push_back(Command::shot);
+    else if (req.uri == "/save")
+        _commandQueue.push_back(Command::save);
+    else if (req.uri == "/stopSave")
+        _commandQueue.push_back(Command::stopSave);
     else if (req.uri == "/quit")
         _commandQueue.push_back(Command::quit);
     else

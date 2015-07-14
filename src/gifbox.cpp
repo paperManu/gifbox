@@ -109,11 +109,18 @@ int main(int argc, char** argv)
         cv::imshow("Result", finalImage);
 
         // Handle HTTP requests
-        RequestHandler::Command cmd = requestHandler->getNextCommand();
-        if (cmd == RequestHandler::Command::quit)
-            continueLoop = false;
-        else if (cmd == RequestHandler::Command::shot)
-            stereoCamera.saveToDisk();
+        RequestHandler::Command cmd;
+        while ((cmd = requestHandler->getNextCommand()) != RequestHandler::Command::nop)
+        {
+            if (cmd == RequestHandler::Command::quit)
+                continueLoop = false;
+            else if (cmd == RequestHandler::Command::save)
+                layerMerger.setSaveMerge(true, "/tmp/gifbox_result");
+            else if (cmd == RequestHandler::Command::stopSave)
+                layerMerger.setSaveMerge(false);
+            else if (cmd == RequestHandler::Command::shot)
+                stereoCamera.saveToDisk();
+        }
 
         // Handle keyboard
         short key = cv::waitKey(16);

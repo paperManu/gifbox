@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <opencv2/imgcodecs.hpp>
+
 using namespace std;
 
 /*************/
@@ -30,6 +32,13 @@ cv::Mat LayerMerger::mergeLayersWithMasks(vector<cv::Mat> layers, vector<cv::Mat
 
     _mergeResult = mergeResult;
 
+    if (_saveMergerResult)
+    {
+        string filename = _saveBasename + "_" + to_string(_saveImageIndex) + ".png";
+        cv::imwrite(filename, mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
+        _saveImageIndex++;
+    }
+
     return mergeResult;
 }
 
@@ -38,4 +47,5 @@ void LayerMerger::setSaveMerge(bool save, string basename)
 {
     _saveMergerResult = save;
     _saveBasename = basename;
+    _saveImageIndex = 0;
 }
