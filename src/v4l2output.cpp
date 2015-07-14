@@ -1,5 +1,8 @@
 #include "v4l2output.h"
 
+#include <errno.h>
+#include <string.h>
+
 using namespace std;
 
 /*************/
@@ -17,7 +20,7 @@ V4l2Output::V4l2Output(int width, int height, string device)
     v4l2format.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
     if (ioctl(_sink, VIDIOC_G_FMT, &v4l2format))
     {
-        cout << "Error while setting v4l2 loopback device" << endl;
+        cout << "Error while getting v4l2 loopback device format: " << strerror(errno) << endl;
         return;
     }
 
@@ -27,7 +30,7 @@ V4l2Output::V4l2Output(int width, int height, string device)
     v4l2format.fmt.pix.sizeimage = width * height * 3;
     if (ioctl(_sink, VIDIOC_S_FMT, v4l2format) < 0)
     {
-        cout << "Error while setting v4l2 loopback device" << endl;
+        cout << "Error while setting v4l2 loopback device format: " << strerror(errno) << endl;
         return;
     }
     

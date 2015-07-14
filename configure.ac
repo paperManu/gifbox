@@ -15,7 +15,7 @@ AC_PROG_OBJCXX
 
 CC="gcc"
 CXX="g++"
-CXXFLAGS="$CXXFLAGS -std=c++11"
+CXXFLAGS="$CXXFLAGS -Wall -std=c++11"
 
 export PKG_CONFIG_PATH=$srcdir/pkgconfig:/usr/local/lib/pkgconfig:/usr/lib/pkgconfig
 

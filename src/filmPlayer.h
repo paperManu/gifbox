@@ -39,10 +39,7 @@ class FilmPlayer
 
         explicit operator bool() const
         {
-            if (_ready < 0)
-                return false;
-            else
-                return true;
+            return _ready;
         }
 
         void start();

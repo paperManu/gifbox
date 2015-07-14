@@ -44,14 +44,14 @@ int main(int argc, char** argv)
 
     // Load films
     vector<FilmPlayer> films;
-    films.emplace_back("../films/ALL_THE_RAGE/", 32, 2);
+    films.emplace_back("./films/ALL_THE_RAGE/", 32, 2);
     bool isReady = true;
     for (auto& film : films)
         isReady = isReady && film;
     if (!isReady)
     {
         cout << "Could not load films. Exiting" << endl;
-        exit(1);
+        return 1;
     }
     films[0].start();
 
@@ -61,9 +61,9 @@ int main(int argc, char** argv)
     stereoCamera.loadConfiguration("intrinsics.yml", "extrinsics.yml");
 
     // Prepare v4l2 loopback
-    V4l2Output v4l2sink(640, 480);
+    V4l2Output v4l2sink(640, 480, "/dev/video1");
     if (!v4l2sink)
-        exit(1);
+        return 1;
 
     cv::Mat disparityColor;
 
