@@ -64,7 +64,6 @@ int main(int argc, char** argv)
         cv::Mat disparity = stereoCamera.retrieveDisparity();
         if (disparityColor.total() == 0)
             disparityColor = cv::Mat(frames[0].size(), frames[0].type());
-        cv::cvtColor(disparity, disparityColor, cv::COLOR_GRAY2BGR);
         v4l2sink.writeToDevice(disparityColor.data, disparityColor.total() * disparityColor.elemSize());
 
         vector<cv::Mat> remappedFrames = stereoCamera.retrieveRemapped();
@@ -76,7 +75,7 @@ int main(int argc, char** argv)
             cv::imshow(name, frame);
             index++;
         }
-        cv::imshow("disparity", disparityColor);
+        cv::imshow("disparity", disparity);
 
         // Handle HTTP requests
         RequestHandler::Command cmd = requestHandler->getNextCommand();

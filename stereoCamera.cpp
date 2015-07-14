@@ -28,14 +28,12 @@ void StereoCamera::init(vector<int> camIndices)
         cout << "Opening camera " << idx << endl;
         _cameras.emplace_back(VideoCapture());
         _cameras[_cameras.size() - 1].open(idx);
-        //_cameras[_cameras.size() - 1].set(CV_CAP_PROP_FRAME_WIDTH, 1280);
-        //_cameras[_cameras.size() - 1].set(CV_CAP_PROP_FRAME_HEIGHT, 720);
     }
 
     _frames.resize(camIndices.size());
     _calibrations.resize(camIndices.size());
 
-    _stereoMatcher = cuda::createStereoBM(64, 11);
+    _stereoMatcher = cuda::createStereoBM(64, 21);
     _d_frames.resize(2);
 }
 
@@ -173,6 +171,7 @@ void StereoCamera::saveToDisk()
     {
         string filename = "grabs/camera_" + to_string(_captureIndex) + "_" + to_string(i) + ".jpg";
         imwrite(filename, _frames[i], {CV_IMWRITE_JPEG_QUALITY, 95});
+        cout << "Save images in " << filename << endl;
     }
     _captureIndex++;
 }
