@@ -33,7 +33,7 @@ void StereoCamera::init(vector<int> camIndices)
     _frames.resize(camIndices.size());
     _calibrations.resize(camIndices.size());
 
-    _stereoMatcher = cuda::createStereoBM(64, 21);
+    _stereoMatcher = cuda::createStereoBM(64, 15);
     _d_frames.resize(2);
 }
 

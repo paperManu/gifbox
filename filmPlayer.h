@@ -1,5 +1,4 @@
 /*
- *
  * Copyright (C) 2015 Emmanuel Durand
  *
  * This file is part of GifBox.
@@ -18,38 +17,45 @@
  * along with GifBox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef V4L2OUTPUT_H
-#define V4L2OUTPUT_H
+#ifndef FILMPLAYER_H
+#define FILMPLAYER_H
 
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-
-#include <iostream>
+#include <chrono>
 #include <string>
+#include <vector>
 
-#include <linux/videodev2.h>
+#include <opencv2/core.hpp>
+#include <opencv2/imgcodecs.hpp>
+
+#define PLANE_BASENAME "plan"
+#define FRAME_BASENAME "Frame"
 
 /*************/
-class V4l2Output
+class FilmPlayer
 {
     public:
-        V4l2Output(int width, int height, std::string device = "/dev/video0");
-        ~V4l2Output();
+        FilmPlayer(std::string path, int frameNbr, int planeNbr, float fps = 10.f);
 
         explicit operator bool() const
         {
-            if (_sink < 0)
+            if (_ready < 0)
                 return false;
             else
                 return true;
         }
 
-        bool writeToDevice(void* data, size_t size);
+        void start();
+        std::vector<cv::Mat>& getCurrentFrame();
 
     private:
-        std::string _device {};
-        int _sink {-1};
+        std::string _path {};
+        int _frameNbr {0};
+        int _planeNbr {0};
+        float _fps {10.f};
+
+        bool _ready {false};
+        std::vector<std::vector<cv::Mat>> _frames;
+        std::chrono::milliseconds _startTime;
 };
 
 #endif

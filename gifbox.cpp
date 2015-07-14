@@ -14,7 +14,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with blobserver.  If not, see <http://www.gnu.org/licenses/>.
+ * along with GifBox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <chrono>
@@ -25,6 +25,7 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "filmPlayer.h"
 #include "httpServer.h"
 #include "stereoCamera.h"
 #include "v4l2output.h"
@@ -40,6 +41,19 @@ int main(int argc, char** argv)
     thread serverThread = thread([&]() {
         server.run();
     });
+
+    // Load films
+    vector<FilmPlayer> films;
+    films.emplace_back("../films/ALL_THE_RAGE/", 32, 2);
+    bool isReady = true;
+    for (auto& film : films)
+        isReady = isReady && film;
+    if (!isReady)
+    {
+        cout << "Could not load films. Exiting" << endl;
+        exit(1);
+    }
+    films[0].start();
 
     // Load cameras
     vector<int> camIndices {0, 1};
@@ -76,6 +90,11 @@ int main(int argc, char** argv)
             index++;
         }
         cv::imshow("disparity", disparity);
+
+        // Get current film frame
+        auto frame = films[0].getCurrentFrame();
+        cv::imshow("film_front", frame[0]);
+        cv::imshow("film_back", frame[1]);
 
         // Handle HTTP requests
         RequestHandler::Command cmd = requestHandler->getNextCommand();
