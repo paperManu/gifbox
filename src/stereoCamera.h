@@ -31,13 +31,20 @@
 #include <opencv2/videoio.hpp>
 #include <opencv2/cudastereo.hpp>
 
-
 /*************/
 class StereoCamera
 {
     public:
         StereoCamera();
         StereoCamera(std::vector<int> camIndices);
+
+        explicit operator bool() const
+        {
+            if (_calibrationLoaded && _cameras.size() >= 2)
+                return true;
+            else
+                return false;
+        }
 
         void computeDisparity();
         bool grab();

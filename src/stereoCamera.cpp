@@ -28,6 +28,7 @@ void StereoCamera::init(vector<int> camIndices)
         cout << "Opening camera " << idx << endl;
         _cameras.emplace_back(VideoCapture());
         _cameras[_cameras.size() - 1].open(idx);
+        _cameras[_cameras.size() - 1].set(cv::CAP_PROP_EXPOSURE, 1024);
     }
 
     _frames.resize(camIndices.size());
@@ -86,7 +87,7 @@ void StereoCamera::computeDisparity()
     {
         cv::Mat gray;
         cv::cvtColor(_remappedFrames[i], gray, COLOR_BGR2GRAY);
-        _d_frames[i].upload(gray);
+        _d_frames[i].upload(_remappedFrames[i]);
     }
     _d_disparity = cuda::GpuMat(_frames[0].size(), CV_8U);
 
@@ -104,7 +105,12 @@ bool StereoCamera::grab()
         return state;
 
     for (unsigned int i = 0; i < _cameras.size(); ++i)
-        state &= _cameras[i].retrieve(_frames[i], 0);
+    {
+        cv::Mat rawFrame;
+        state &= _cameras[i].retrieve(rawFrame, 0);
+        cv::Mat bayerFrame(rawFrame.rows, rawFrame.cols, CV_8U, rawFrame.ptr());
+        cv::cvtColor(bayerFrame, _frames[i], cv::COLOR_BayerGB2RGB);
+    }
 
     return state;
 }

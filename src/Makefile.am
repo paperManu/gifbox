@@ -6,6 +6,7 @@ gifengine_SOURCES = \
 	httpServer.cpp \
 	layerMerger.cpp \
 	stereoCamera.cpp \
+    v4ldevice.cpp \
 	v4l2output.cpp
 
 gifengine_CXXFLAGS = \

@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     films[0].start();
 
     // Load cameras
-    vector<int> camIndices {0, 1};
+    vector<int> camIndices {1, 2};
     StereoCamera stereoCamera(camIndices);
     stereoCamera.loadConfiguration("intrinsics.yml", "extrinsics.yml");
 
@@ -81,41 +81,50 @@ int main(int argc, char** argv)
     {
         // Do camera stuff
         stereoCamera.grab();
-        vector<cv::Mat> frames = stereoCamera.retrieve();
 
-        stereoCamera.computeDisparity();
-        cv::Mat disparity = stereoCamera.retrieveDisparity();
-
-        vector<cv::Mat> remappedFrames = stereoCamera.retrieveRemapped();
-
-        unsigned int index = 0;
-        for (auto& frame : remappedFrames)
+        if (stereoCamera)
         {
-            string name = "Camera remapped" + to_string(index);
-            cv::imshow(name, frame);
-            index++;
+            stereoCamera.computeDisparity();
+            cv::Mat disparity = stereoCamera.retrieveDisparity();
+
+            vector<cv::Mat> remappedFrames = stereoCamera.retrieveRemapped();
+
+            unsigned int index = 0;
+            for (auto& frame : remappedFrames)
+            {
+                string name = "Camera remapped" + to_string(index);
+                cv::imshow(name, frame);
+                index++;
+            }
+            cv::imshow("disparity", disparity);
+
+            // Get current film frame
+            auto frame = films[0].getCurrentFrame();
+            auto frameMask = films[0].getCurrentMask();
+
+            cv::Mat cameraMaskBG, cameraMaskFG;
+            cv::threshold(disparity, cameraMaskBG, 48, 255, cv::THRESH_BINARY);
+            cv::threshold(disparity, cameraMaskFG, 60, 255, cv::THRESH_BINARY);
+            auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], remappedFrames[0], frame[0], remappedFrames[0]},
+                                                               {cameraMaskBG, frameMask[0], cameraMaskFG});
+
+            cv::imshow("Result", finalImage);
+
+            // Write the result to v4l2
+            if (state.sendToV4l2)
+            {
+                if (!v4l2sink || finalImage.rows != v4l2sink->getHeight() || finalImage.cols != v4l2sink->getWidth())
+                    v4l2sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video3"));
+                if (*v4l2sink)
+                    v4l2sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
+            }
         }
-        cv::imshow("disparity", disparity);
-
-        // Get current film frame
-        auto frame = films[0].getCurrentFrame();
-        auto frameMask = films[0].getCurrentMask();
-
-        cv::Mat cameraMaskBG, cameraMaskFG;
-        cv::threshold(disparity, cameraMaskBG, 48, 255, cv::THRESH_BINARY);
-        cv::threshold(disparity, cameraMaskFG, 60, 255, cv::THRESH_BINARY);
-        auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], frames[0], frame[0], frames[0]},
-                                                           {cameraMaskBG, frameMask[0], cameraMaskFG});
-
-        cv::imshow("Result", finalImage);
-
-        // Write the result to v4l2
-        if (state.sendToV4l2)
+        else
         {
-            if (!v4l2sink || finalImage.rows != v4l2sink->getHeight() || finalImage.cols != v4l2sink->getWidth())
-                v4l2sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video1"));
-            if (*v4l2sink)
-                v4l2sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
+            auto rawFrames = stereoCamera.retrieve();
+            int rawFrameIndex = 0;
+            for (auto& frame : rawFrames)
+                cv::imshow("Raw Frame " + to_string(rawFrameIndex++), frame);
         }
 
         // Handle HTTP requests
