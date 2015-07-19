@@ -89,7 +89,7 @@ int main(int argc, char** argv)
 
     // Load cameras
     vector<int> camIndices {_state.cam1, _state.cam2};
-    StereoCamera stereoCamera(camIndices);
+    StereoCamera stereoCamera(camIndices, StereoCamera::StereoMode::CSBP);
     stereoCamera.loadConfiguration("intrinsics.yml", "extrinsics.yml");
 
     // Prepare v4l2 loopback
@@ -126,7 +126,7 @@ int main(int argc, char** argv)
             cv::Mat cameraMaskBG, cameraMaskFG;
             cv::threshold(disparity, cameraMaskBG, 26, 255, cv::THRESH_BINARY);
             cv::threshold(disparity, cameraMaskFG, 16, 255, cv::THRESH_BINARY);
-            auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], remappedFrames[0], frame[0], remappedFrames[0]},
+            auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], remappedFrames[1], frame[0], remappedFrames[1]},
                                                                {cameraMaskBG, frameMask[0], cameraMaskFG});
 
             cv::imshow("Result", finalImage);

@@ -7,15 +7,17 @@ using namespace std;
 using namespace cv;
 
 /*************/
-StereoCamera::StereoCamera()
+StereoCamera::StereoCamera(StereoMode mode)
 {
+    _stereoMode = mode;
     vector<int> camIndices {0, 1};
     init(camIndices);
 }
 
 /*************/
-StereoCamera::StereoCamera(vector<int> camIndices)
+StereoCamera::StereoCamera(vector<int> camIndices, StereoMode mode)
 {
+    _stereoMode = mode;
     init(camIndices);
 }
 
@@ -34,7 +36,11 @@ void StereoCamera::init(vector<int> camIndices)
     _frames.resize(camIndices.size());
     _calibrations.resize(camIndices.size());
 
-    _stereoMatcher = cuda::createStereoBM(32, 9);
+    if (_stereoMode == BM)
+        _stereoMatcher = cuda::createStereoBM(32, 9);
+    else if (_stereoMode == CSBP)
+        _stereoMatcher = cuda::createStereoConstantSpaceBP(64, 8, 4, 8, CV_16SC1);
+
     _disparityFilter = cuda::createDisparityBilateralFilter(32, 3, 3);
     _d_frames.resize(2);
 }
@@ -104,11 +110,20 @@ void StereoCamera::computeDisparity()
     _stereoMatcher->compute(_d_frames[0], _d_frames[1], _d_disparity);
     cv::Mat disparityMap;
     _d_disparity.download(disparityMap);
-    cv::resize(disparityMap, _disparityMap, _frames[0].size());
+    if (_stereoMode == CSBP)
+    {
+        disparityMap.convertTo(_disparityMap, CV_8U);
+        cv::resize(_disparityMap, disparityMap, _frames[0].size());
+        _disparityMap = disparityMap;
+    }
+    else
+    {
+        cv::resize(disparityMap, _disparityMap, _frames[0].size());
+    }
 
     // Refine disparity
     _d_disparity.upload(_disparityMap);
-    _d_frames[0].upload(_remappedFrames[0]);
+    _d_frames[0].upload(_remappedFrames[1]);
     cuda::GpuMat d_refinedDisparity;
     _disparityFilter->apply(_d_disparity, _d_frames[0], d_refinedDisparity);
 

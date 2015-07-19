@@ -35,8 +35,14 @@
 class StereoCamera
 {
     public:
-        StereoCamera();
-        StereoCamera(std::vector<int> camIndices);
+        enum StereoMode
+        {
+            BM,
+            CSBP
+        };
+
+        StereoCamera(StereoMode mode = BM);
+        StereoCamera(std::vector<int> camIndices, StereoMode mode = BM);
 
         explicit operator bool() const
         {
@@ -62,6 +68,7 @@ class StereoCamera
         std::chrono::system_clock::time_point _startTime;
         std::vector<cv::VideoCapture> _cameras;
 
+        StereoMode _stereoMode;
         bool _showCalibrationLines {false};
         bool _activateCalibration {true};
 
