@@ -135,7 +135,7 @@ int main(int argc, char** argv)
             if (_state.sendToV4l2)
             {
                 if (!v4l2sink || finalImage.rows != v4l2sink->getHeight() || finalImage.cols != v4l2sink->getWidth())
-                    v4l2sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video" + _state.camOut));
+                    v4l2sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video" + to_string(_state.camOut)));
                 if (*v4l2sink)
                     v4l2sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
             }
@@ -149,28 +149,31 @@ int main(int argc, char** argv)
         }
 
         // Handle HTTP requests
-        pair<RequestHandler::Command, RequestHandler::ReturnFunction> cmd;
-        while ((cmd = requestHandler->getNextCommand()).first != RequestHandler::Command::nop)
+        pair<RequestHandler::Command, RequestHandler::ReturnFunction> message;
+        while ((message = requestHandler->getNextCommand()).first.command != RequestHandler::CommandId::nop)
         {
-            if (cmd.first == RequestHandler::Command::quit)
+            auto command = message.first;
+            auto replyFunction = message.second;
+
+            if (command.command == RequestHandler::CommandId::quit)
             {
                 _state.run = false;
             }
-            else if (cmd.first == RequestHandler::Command::record)
+            else if (command.command == RequestHandler::CommandId::record)
             {
                 layerMerger.setSaveMerge(true, "/tmp/gifbox_result");
             }
-            else if (cmd.first == RequestHandler::Command::stop)
+            else if (command.command == RequestHandler::CommandId::stop)
             {
                 layerMerger.setSaveMerge(false);
                 _state.sendToV4l2 = false;
             }
-            else if (cmd.first == RequestHandler::Command::start)
+            else if (command.command == RequestHandler::CommandId::start)
             {
                 _state.sendToV4l2 = true;
             }
 
-            cmd.second(true, {});
+            message.second(true, {"Default reply"});
         }
 
         // Handle keyboard

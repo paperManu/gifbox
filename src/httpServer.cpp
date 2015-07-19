@@ -657,14 +657,20 @@ RequestHandler::RequestHandler()
 void RequestHandler::handleRequest(const Request& req, Reply& rep)
 {
     unique_lock<mutex> lock(_queueMutex);
-    if (req.uri == "/start")
-        _commandQueue.push_back(Command::start);
-    else if (req.uri == "/record")
-        _commandQueue.push_back(Command::record);
-    else if (req.uri == "/stop")
-        _commandQueue.push_back(Command::stop);
-    else if (req.uri == "/quit")
-        _commandQueue.push_back(Command::quit);
+
+    string requestPath;
+    Values requestArgs;
+    if (!urlDecode(req.uri, requestPath, requestArgs))
+        return;
+
+    if (requestPath.find("/start") == 0)
+        _commandQueue.push_back({CommandId::start, requestArgs});
+    else if (requestPath.find("/record") == 0)
+        _commandQueue.push_back({CommandId::record, requestArgs});
+    else if (requestPath.find("/stop") == 0)
+        _commandQueue.push_back({CommandId::stop, requestArgs});
+    else if (requestPath.find("/quit") == 0)
+        _commandQueue.push_back({CommandId::quit, requestArgs});
     else
     {
         cout << "No command associated to URI " << req.uri << endl;
@@ -674,17 +680,31 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
 
     condition_variable cv;
     atomic_bool replyState {false};
+    Values replyValues {};
 
-    auto replyFunc = [&](bool reply, Values) -> void{
+    auto replyFunc = [&](bool reply, Values answer) -> void {
         cv.notify_all();
         replyState = reply;
+        replyValues = answer;
     };
 
     _commandReturnFuncQueue.push_back(replyFunc);
     cv.wait_for(lock, chrono::milliseconds(2000));
 
     if (replyState)
+    {
         rep = Reply::stockReply(Reply::ok);
+        rep.status = Reply::ok;
+        std::string buffer;
+        for (auto& v : replyValues)
+            buffer += v.asString() + " ";
+        rep.content = buffer.c_str();
+        rep.headers.resize(2);
+        rep.headers[0].name = "Content-Length";
+        rep.headers[0].value = std::to_string(buffer.size());
+        rep.headers[1].name = "Content-Type";
+        rep.headers[1].value = "text";
+    }
     else
         rep = Reply::stockReply(Reply::internal_server_error);
 }
@@ -694,9 +714,9 @@ pair<RequestHandler::Command, RequestHandler::ReturnFunction> RequestHandler::ge
 {
     unique_lock<mutex> lock(_queueMutex);
     if (_commandQueue.size() == 0)
-        return make_pair(Command::nop, ReturnFunction());
+        return make_pair(Command(CommandId::nop, Values()), ReturnFunction());
 
-    Command command = _commandQueue[0];
+    auto command = _commandQueue[0];
     _commandQueue.pop_front();
 
     auto func = _commandReturnFuncQueue[0];
@@ -705,7 +725,7 @@ pair<RequestHandler::Command, RequestHandler::ReturnFunction> RequestHandler::ge
 }
 
 /*************/
-bool RequestHandler::urlDecode(const std::string& in, std::string& out)
+bool RequestHandler::urlDecode(const std::string& in, std::string& out, Values& args)
 {
     out.clear();
     out.reserve(in.size());
@@ -741,6 +761,29 @@ bool RequestHandler::urlDecode(const std::string& in, std::string& out)
           out += in[i];
         }
     }
+
+    // Get the command arguments
+    std::string nextArg;
+    for (std::size_t i = 0; i < out.size(); ++i)
+    {
+        if (out[i] == '&' || out[i] == '=')
+        {
+            if (nextArg != "")
+                args.push_back(nextArg);
+
+            nextArg.clear();
+
+            continue;
+        }
+        else
+        {
+            nextArg.push_back(out[i]);
+        }
+
+        if (i == out.size() - 1 && nextArg != "")
+            args.push_back(nextArg);
+    }
+    
     return true;
 }
 

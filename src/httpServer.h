@@ -184,9 +184,7 @@ class ConnectionManager
 class RequestHandler
 {
     public:
-        using ReturnFunction = std::function<void(bool, Values)>;
-
-        enum Command
+        enum CommandId
         {
             nop,
             record,
@@ -195,12 +193,27 @@ class RequestHandler
             quit
         };
 
+        struct Command
+        {
+            Command() {}
+            Command(CommandId cmd, Values a)
+            {
+                command = cmd;
+                args = a;
+            }
+
+            CommandId command {CommandId::nop};
+            Values args {};
+        };
+
+        using ReturnFunction = std::function<void(bool, Values)>;
+
         explicit RequestHandler();
         void handleRequest(const Request& req, Reply& rep);
         std::pair<Command, ReturnFunction> getNextCommand();
 
     private:
-        static bool urlDecode(const std::string& in, std::string& out);
+        static bool urlDecode(const std::string& in, std::string& out, Values& args);
         std::deque<Command> _commandQueue;
         std::deque<ReturnFunction> _commandReturnFuncQueue;
         std::mutex _queueMutex;
