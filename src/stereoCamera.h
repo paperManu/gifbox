@@ -55,9 +55,15 @@ class StereoCamera
         cv::Mat retrieveDisparity() {return _disparityMap.clone();}
         void saveToDisk();
 
+        void activateCalibration() {_activateCalibration = !_activateCalibration;}
+        void showCalibrationLines() {_showCalibrationLines = !_showCalibrationLines;}
+
     private:
         std::chrono::system_clock::time_point _startTime;
         std::vector<cv::VideoCapture> _cameras;
+
+        bool _showCalibrationLines {false};
+        bool _activateCalibration {true};
 
         // Frames, on host and client
         std::vector<cv::Mat> _frames;
@@ -69,6 +75,7 @@ class StereoCamera
         cv::Mat _disparityMap;
 
         cv::Ptr<cv::StereoMatcher> _stereoMatcher;
+        cv::Ptr<cv::cuda::DisparityBilateralFilter> _disparityFilter;
 
         unsigned int _captureIndex {0};
 

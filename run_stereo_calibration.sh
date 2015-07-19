@@ -1,4 +1,5 @@
 #!/bin/bash
+for file in `ls *.yml`; do mv $file $file.bckp; done
 rm -f /tmp/camera_*.jpg
 gifengine
 pushd ./

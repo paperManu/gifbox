@@ -27,14 +27,15 @@ void StereoCamera::init(vector<int> camIndices)
     {
         cout << "Opening camera " << idx << endl;
         _cameras.emplace_back(VideoCapture());
-        _cameras[_cameras.size() - 1].open(idx);
-        _cameras[_cameras.size() - 1].set(cv::CAP_PROP_EXPOSURE, 1024);
+        _cameras[_cameras.size() - 1].open("v4l2:///dev/video" + to_string(idx));
+        //_cameras[_cameras.size() - 1].set(cv::CAP_PROP_EXPOSURE, 300);
     }
 
     _frames.resize(camIndices.size());
     _calibrations.resize(camIndices.size());
 
-    _stereoMatcher = cuda::createStereoBM(64, 15);
+    _stereoMatcher = cuda::createStereoBM(32, 9);
+    _disparityFilter = cuda::createDisparityBilateralFilter(32, 3, 3);
     _d_frames.resize(2);
 }
 
@@ -79,20 +80,39 @@ void StereoCamera::computeDisparity()
     }
 
     _remappedFrames.resize(_frames.size());
-    for (unsigned int i = 0; i < _frames.size(); ++i)
-        remap(_frames[i], _remappedFrames[i], _rmaps[i][0], _rmaps[i][1], cv::INTER_LINEAR);
+    if (_activateCalibration)
+    {
+        for (unsigned int i = 0; i < _frames.size(); ++i)
+            remap(_frames[i], _remappedFrames[i], _rmaps[i][0], _rmaps[i][1], cv::INTER_LINEAR);
+    }
+    else
+    {
+        for (unsigned int i = 0; i < _frames.size(); ++i)
+            _remappedFrames[i] = _frames[i];
+    }
 
     _d_frames.resize(_frames.size());
     for (unsigned int i = 0; i < _frames.size(); ++i)
     {
-        cv::Mat gray;
+        cv::Mat gray, resizedGray;
         cv::cvtColor(_remappedFrames[i], gray, COLOR_BGR2GRAY);
-        _d_frames[i].upload(_remappedFrames[i]);
+        cv::resize(gray, resizedGray, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+        _d_frames[i].upload(resizedGray);
     }
     _d_disparity = cuda::GpuMat(_frames[0].size(), CV_8U);
 
     _stereoMatcher->compute(_d_frames[0], _d_frames[1], _d_disparity);
-    _d_disparity.download(_disparityMap);
+    cv::Mat disparityMap;
+    _d_disparity.download(disparityMap);
+    cv::resize(disparityMap, _disparityMap, _frames[0].size());
+
+    // Refine disparity
+    _d_disparity.upload(_disparityMap);
+    _d_frames[0].upload(_remappedFrames[0]);
+    cuda::GpuMat d_refinedDisparity;
+    _disparityFilter->apply(_d_disparity, _d_frames[0], d_refinedDisparity);
+
+    d_refinedDisparity.download(_disparityMap);
 }
 
 /*************/
@@ -100,7 +120,9 @@ bool StereoCamera::grab()
 {
     bool state = true;
     for (unsigned int i = 0; i < _cameras.size(); ++i)
+    {
         state &= _cameras[i].grab();
+    }
     if (!state)
         return state;
 
@@ -110,6 +132,22 @@ bool StereoCamera::grab()
         state &= _cameras[i].retrieve(rawFrame, 0);
         cv::Mat bayerFrame(rawFrame.rows, rawFrame.cols, CV_8U, rawFrame.ptr());
         cv::cvtColor(bayerFrame, _frames[i], cv::COLOR_BayerGB2RGB);
+    }
+
+    if (_showCalibrationLines)
+    {
+        for (auto& frame : _frames)
+        {
+            cv::line(frame, cv::Point(frame.cols / 2, 0), cv::Point(frame.cols / 2, frame.rows), cv::Scalar(0, 255, 0));
+            cv::line(frame, cv::Point(0, frame.rows / 2), cv::Point(frame.cols, frame.rows / 2), cv::Scalar(0, 255, 0));
+
+            // This also outputs the mean value of both cameras
+            auto mean = cv::mean(frame);
+            string text;
+            for (int i = 0; i < mean.rows; ++i)
+                text += to_string(mean[i]) + " // ";
+            cv::putText(frame, text, cv::Point(32, 32), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 255, 0));
+        }
     }
 
     return state;
