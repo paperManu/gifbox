@@ -45,6 +45,13 @@ struct State
     int cam1 {0};
     int cam2 {1};
     int camOut {2};
+
+    string currentFilm {"ALL_THE_RAGE"};
+    int frameNbr {0};
+    float fps {5.f};
+
+    int fgLimit {12};
+    int bgLimit {10};
 } _state;
 
 /*************/
@@ -58,6 +65,12 @@ void parseArguments(int argc, char** argv)
             _state.cam2 = stoi(argv[i + 1]);
         else if ("-out" == string(argv[i]) && i < argc - 1)
             _state.camOut = stoi(argv[i + 1]);
+        else if ("-film" == string(argv[i]) && i < argc - 1)
+            _state.currentFilm = string(argv[i + 1]);
+        else if ("-frameNbr" == string(argv[i]) && i < argc - 1)
+            _state.frameNbr = stoi(argv[i + 1]);
+        else if ("-fps" == string(argv[i]) && i < argc - 1)
+            _state.fps = stof(argv[i + 1]);
         ++i;
     }
 }
@@ -68,7 +81,7 @@ int main(int argc, char** argv)
     parseArguments(argc, argv);
 
     // Launch http server
-    HttpServer server("127.0.0.1", "8888");
+    HttpServer server("127.0.0.1", "8080");
     auto requestHandler = server.getRequestHandler();
     thread serverThread = thread([&]() {
         server.run();
@@ -76,7 +89,7 @@ int main(int argc, char** argv)
 
     // Load films
     vector<FilmPlayer> films;
-    films.emplace_back("./films/ALL_THE_RAGE/", 32, 2);
+    films.emplace_back("./films/" + _state.currentFilm + "/", _state.frameNbr, 2, _state.fps);
     bool isReady = true;
     for (auto& film : films)
         isReady = isReady && film;
@@ -124,12 +137,14 @@ int main(int argc, char** argv)
             auto frameMask = films[0].getCurrentMask();
 
             cv::Mat cameraMaskBG, cameraMaskFG;
-            cv::threshold(disparity, cameraMaskBG, 26, 255, cv::THRESH_BINARY);
-            cv::threshold(disparity, cameraMaskFG, 16, 255, cv::THRESH_BINARY);
-            auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], remappedFrames[1], frame[0], remappedFrames[1]},
+            cv::threshold(disparity, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY);
+            cv::threshold(disparity, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY);
+            auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], remappedFrames[0], frame[0], remappedFrames[0]},
                                                                {cameraMaskBG, frameMask[0], cameraMaskFG});
 
-            cv::imshow("Result", finalImage);
+            cv::Mat finalImageFlipped;
+            cv::flip(finalImage, finalImageFlipped, 1);
+            cv::imshow("Result", finalImageFlipped);
 
             // Write the result to v4l2
             if (_state.sendToV4l2)
@@ -177,7 +192,8 @@ int main(int argc, char** argv)
         }
 
         // Handle keyboard
-        short key = cv::waitKey(16);
+        // TODO: more precise loop timing
+        short key = cv::waitKey(40);
         switch (key)
         {
         default:
@@ -193,6 +209,22 @@ int main(int argc, char** argv)
             break;
         case 's': // Save images to disk
             stereoCamera.saveToDisk();
+            break;
+        case 'u': // FG forward
+            _state.fgLimit++;
+            cout << "Foreground: " << _state.fgLimit << endl;
+            break;
+        case 'j': // FG backward
+            _state.fgLimit--;
+            cout << "Foreground: " << _state.fgLimit << endl;
+            break;
+        case 'i': // FG forward
+            _state.bgLimit++;
+            cout << "Background: " << _state.bgLimit << endl;
+            break;
+        case 'k': // FG backward
+            _state.bgLimit--;
+            cout << "Background: " << _state.bgLimit << endl;
             break;
         }
     }

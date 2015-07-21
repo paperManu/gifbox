@@ -36,10 +36,12 @@ void StereoCamera::init(vector<int> camIndices)
     _frames.resize(camIndices.size());
     _calibrations.resize(camIndices.size());
 
+    _bgSubtractor = cuda::createBackgroundSubtractorMOG2(500);
+
     if (_stereoMode == BM)
         _stereoMatcher = cuda::createStereoBM(32, 9);
     else if (_stereoMode == CSBP)
-        _stereoMatcher = cuda::createStereoConstantSpaceBP(64, 8, 4, 8, CV_16SC1);
+        _stereoMatcher = cuda::createStereoConstantSpaceBP(32, 8, 4, 4, CV_16SC1);
 
     _disparityFilter = cuda::createDisparityBilateralFilter(32, 3, 3);
     _d_frames.resize(2);
@@ -105,7 +107,17 @@ void StereoCamera::computeDisparity()
         cv::resize(gray, resizedGray, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
         _d_frames[i].upload(resizedGray);
     }
-    _d_disparity = cuda::GpuMat(_frames[0].size(), CV_8U);
+
+    // TODO: do segmentation based on the BG subtraction
+    cuda::GpuMat d_frame;
+    d_frame.upload(_frames[0]);
+    cuda::GpuMat d_bgSegmentation;
+    _bgSubtractor->apply(d_frame, d_bgSegmentation, 0.001);
+    cv::Mat bgSegmentation;
+    cv::Mat maskImage(_frames[0].size(), _frames[0].type());
+    d_bgSegmentation.download(bgSegmentation);
+    if (bgSegmentation.rows > 0)
+        cv::imshow("bg", bgSegmentation);
 
     _stereoMatcher->compute(_d_frames[0], _d_frames[1], _d_disparity);
     cv::Mat disparityMap;

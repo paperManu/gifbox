@@ -29,6 +29,7 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
+#include <opencv2/cudabgsegm.hpp>
 #include <opencv2/cudastereo.hpp>
 
 /*************/
@@ -81,6 +82,7 @@ class StereoCamera
         std::vector<std::vector<cv::Mat>> _rmaps;
         cv::Mat _disparityMap;
 
+        cv::Ptr<cv::BackgroundSubtractor> _bgSubtractor;
         cv::Ptr<cv::StereoMatcher> _stereoMatcher;
         cv::Ptr<cv::cuda::DisparityBilateralFilter> _disparityFilter;
 

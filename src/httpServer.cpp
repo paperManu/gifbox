@@ -663,11 +663,11 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
     if (!urlDecode(req.uri, requestPath, requestArgs))
         return;
 
-    if (requestPath.find("/start") == 0)
+    if (requestPath.find("/camera/start") == 0)
         _commandQueue.push_back({CommandId::start, requestArgs});
-    else if (requestPath.find("/record") == 0)
+    else if (requestPath.find("/camera/record") == 0)
         _commandQueue.push_back({CommandId::record, requestArgs});
-    else if (requestPath.find("/stop") == 0)
+    else if (requestPath.find("/camera/stop") == 0)
         _commandQueue.push_back({CommandId::stop, requestArgs});
     else if (requestPath.find("/quit") == 0)
         _commandQueue.push_back({CommandId::quit, requestArgs});
