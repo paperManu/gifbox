@@ -160,7 +160,7 @@ class Connection : public std::enable_shared_from_this<Connection>
         Request _request;
         Reply _reply;
 
-        std::array<char, 8192> _buffer;
+        std::vector<char> _buffer;
 
         void doRead();
         void doWrite();

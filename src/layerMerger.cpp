@@ -3,11 +3,12 @@
 #include <iostream>
 
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/highgui.hpp>
 
 using namespace std;
 
 /*************/
-cv::Mat LayerMerger::mergeLayersWithMasks(vector<cv::Mat> layers, vector<cv::Mat> masks)
+cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const vector<cv::Mat>& masks)
 {
     if (layers.size() != masks.size() + 1)
     {
@@ -19,15 +20,40 @@ cv::Mat LayerMerger::mergeLayersWithMasks(vector<cv::Mat> layers, vector<cv::Mat
 
     for (unsigned int i = 1; i < layers.size(); ++i)
     {
-        cv::Mat tmpLayer = layers[i];
-        cv::Mat tmpMask = masks[i - 1];
+        cv::Mat tmpLayer = layers[i].clone();
+        cv::Mat tmpAlpha = masks[i - 1];
 
         if (layers[i].size() != layers[0].size())
             cv::resize(layers[i], tmpLayer, layers[0].size(), cv::INTER_LINEAR);
         if (masks[i - 1].size() != layers[0].size())
-            cv::resize(masks[i - 1], tmpMask, layers[0].size(), cv::INTER_LINEAR);
+            cv::resize(masks[i - 1], tmpAlpha, layers[0].size(), cv::INTER_LINEAR);
 
-        tmpLayer.copyTo(mergeResult, tmpMask);
+        cv::Mat alpha;
+        cv::cvtColor(tmpAlpha, alpha, cv::COLOR_GRAY2BGR);
+
+        tmpLayer = tmpLayer.mul(alpha, 1.0 / 255.0);
+
+        for (int y = 0; y < mergeResult.rows; ++y)
+            for (int x = 0; x < mergeResult.cols; ++x)
+            {
+                auto alphaValue = alpha.at<cv::Vec3b>(y, x)[0];
+                if (alphaValue == 0)
+                {
+                    continue;
+                }
+                else if (alphaValue == 255)
+                {
+                    mergeResult.at<cv::Vec3b>(y, x)[0] = tmpLayer.at<cv::Vec3b>(y, x)[0];
+                    mergeResult.at<cv::Vec3b>(y, x)[1] = tmpLayer.at<cv::Vec3b>(y, x)[1];
+                    mergeResult.at<cv::Vec3b>(y, x)[2] = tmpLayer.at<cv::Vec3b>(y, x)[2];
+                }
+                else
+                {
+                    mergeResult.at<cv::Vec3b>(y, x)[0] = ((255 - alphaValue) * mergeResult.at<cv::Vec3b>(y, x)[0] + alphaValue * tmpLayer.at<cv::Vec3b>(y, x)[0]) / 255;
+                    mergeResult.at<cv::Vec3b>(y, x)[1] = ((255 - alphaValue) * mergeResult.at<cv::Vec3b>(y, x)[1] + alphaValue * tmpLayer.at<cv::Vec3b>(y, x)[1]) / 255;
+                    mergeResult.at<cv::Vec3b>(y, x)[2] = ((255 - alphaValue) * mergeResult.at<cv::Vec3b>(y, x)[2] + alphaValue * tmpLayer.at<cv::Vec3b>(y, x)[2]) / 255;
+                }
+            }
     }
 
     _mergeResult = mergeResult;

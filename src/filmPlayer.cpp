@@ -21,7 +21,7 @@ FilmPlayer::FilmPlayer(string path, int frameNbr, int planeNbr, float fps)
         for (int p = 1; p <= planeNbr; ++p)
         {
             string filename = path + "/" + string(PLANE_BASENAME) + to_string(p) + "/" + string(FRAME_BASENAME) + to_string(i) + ".png";
-            cv::Mat frame = cv::imread(filename, cv::IMREAD_COLOR);
+            cv::Mat frame = cv::imread(filename, cv::IMREAD_UNCHANGED);
             if (frame.data == nullptr)
             {
                 cout << "FilmPlayer: could not load frame " << filename << ". Exiting." << endl;
@@ -33,11 +33,27 @@ FilmPlayer::FilmPlayer(string path, int frameNbr, int planeNbr, float fps)
 
             if (p < planeNbr)
             {
-                cv::Mat gray;
-                cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-                cv::Mat mask;
-                cv::threshold(gray, mask, 254, 255, cv::THRESH_BINARY_INV);
-                masks.emplace_back(mask);
+                // If there is no alpha channel, we create the mask from the white value
+                if (frame.channels() < 4)
+                {
+                    cv::Mat gray;
+                    cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+                    cv::Mat mask;
+                    cv::threshold(gray, mask, 254, 255, cv::THRESH_BINARY_INV);
+                    masks.emplace_back(mask);
+                }
+                else
+                {
+                    cv::Mat alpha(frame.size(), CV_8UC1);
+                    cv::mixChannels(frame, alpha, {3, 0});
+                    masks.emplace_back(alpha);
+
+                    cv::cvtColor(frame, frames[frames.size() - 1], cv::COLOR_RGBA2RGB);
+                }
+            }
+            else if (frame.channels() == 4)
+            {
+                cv::cvtColor(frame, frames[frames.size() - 1], cv::COLOR_RGBA2RGB);
             }
         }
 
