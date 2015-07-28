@@ -36,30 +36,43 @@ void StereoCamera::init(vector<int> camIndices)
     _frames.resize(camIndices.size());
     _calibrations.resize(camIndices.size());
 
-    _bgSubtractor = cuda::createBackgroundSubtractorMOG2(500);
-
     if (_stereoMode == BM)
         _stereoMatcher = cuda::createStereoBM(32, 9);
     else if (_stereoMode == CSBP)
         _stereoMatcher = cuda::createStereoConstantSpaceBP(32, 8, 4, 4, CV_16SC1);
 
     _disparityFilter = cuda::createDisparityBilateralFilter(32, 3, 3);
-    _d_frames.resize(2);
+
+    _bgSubtractor = cuda::createBackgroundSubtractorMOG2(500);
+    Mat element = getStructuringElement(cv::MORPH_ELLIPSE, Size(5, 5));
+    _closeFilter = cuda::createMorphologyFilter(cv::MORPH_CLOSE, CV_8UC1, element, Point(-1, -1), 1);
+    _dilateFilter = cuda::createMorphologyFilter(cv::MORPH_DILATE, CV_8UC1, element, Point(-1, -1), 4);
 }
 
 /*************/
-void StereoCamera::computeDisparity()
+void StereoCamera::compute()
+{
+    if (correctImages())
+    {
+        computeDisparity();
+        computeBackground();
+        computeMask();
+    }
+}
+
+/*************/
+bool StereoCamera::correctImages()
 {
     if (!_calibrationLoaded)
     {
         cout << "Stereo::computeDisparity - No valid calibration has been loaded" << endl;
-        return;
+        return false;
     }
 
     if (_frames.size() == 0)
     {
         cout << "Stereo::computeDisparity - No frame captured" << endl;
-        return;
+        return false;
     }
 
     for (auto& frame : _frames)
@@ -67,7 +80,7 @@ void StereoCamera::computeDisparity()
         if (frame.empty())
         {
             cout << "Stereo::computeDisparity - Not all frames were grabbed" << endl;
-            return;
+            return false;
         }
     }
 
@@ -100,6 +113,13 @@ void StereoCamera::computeDisparity()
     }
 
     _d_frames.resize(_frames.size());
+
+    return true;
+}
+
+/*************/
+void StereoCamera::computeDisparity()
+{
     for (unsigned int i = 0; i < _frames.size(); ++i)
     {
         cv::Mat gray, resizedGray;
@@ -107,17 +127,6 @@ void StereoCamera::computeDisparity()
         cv::resize(gray, resizedGray, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
         _d_frames[i].upload(resizedGray);
     }
-
-    // TODO: do segmentation based on the BG subtraction
-    cuda::GpuMat d_frame;
-    d_frame.upload(_frames[0]);
-    cuda::GpuMat d_bgSegmentation;
-    _bgSubtractor->apply(d_frame, d_bgSegmentation, 0.001);
-    cv::Mat bgSegmentation;
-    cv::Mat maskImage(_frames[0].size(), _frames[0].type());
-    d_bgSegmentation.download(bgSegmentation);
-    if (bgSegmentation.rows > 0)
-        cv::imshow("bg", bgSegmentation);
 
     _stereoMatcher->compute(_d_frames[0], _d_frames[1], _d_disparity);
     cv::Mat disparityMap;
@@ -136,10 +145,32 @@ void StereoCamera::computeDisparity()
     // Refine disparity
     _d_disparity.upload(_disparityMap);
     _d_frames[0].upload(_remappedFrames[1]);
-    cuda::GpuMat d_refinedDisparity;
-    _disparityFilter->apply(_d_disparity, _d_frames[0], d_refinedDisparity);
+    _disparityFilter->apply(_d_disparity, _d_frames[0], _d_frames[1]);
 
-    d_refinedDisparity.download(_disparityMap);
+    // Filter it
+    _dilateFilter->apply(_d_frames[1], _d_disparity);
+
+    _d_disparity.download(_disparityMap);
+}
+
+/*************/
+void StereoCamera::computeBackground()
+{
+    _d_frames[0].upload(_remappedFrames[0]);
+    _bgSubtractor->apply(_d_frames[0], _d_frames[1], _bgLearningTime);
+    cv::cuda::threshold(_d_frames[1], _d_frames[0], 1, 255, cv::THRESH_BINARY);
+    _closeFilter->apply(_d_frames[0], _d_background);
+
+    cv::Mat bgSegmentation;
+    _d_background.download(bgSegmentation);
+    cv::imshow("bgseg", bgSegmentation);
+}
+
+/*************/
+void StereoCamera::computeMask()
+{
+    cv::cuda::multiply(_d_disparity, _d_frames[0], _d_depthMask, 1.0 / 255.0);
+    _d_depthMask.download(_depthMask);
 }
 
 /*************/

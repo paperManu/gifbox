@@ -29,7 +29,9 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
+#include <opencv2/cudaarithm.hpp>
 #include <opencv2/cudabgsegm.hpp>
+#include <opencv2/cudafilters.hpp>
 #include <opencv2/cudastereo.hpp>
 
 /*************/
@@ -53,17 +55,19 @@ class StereoCamera
                 return false;
         }
 
-        void computeDisparity();
+        void compute();
         bool grab();
         bool isReady();
         bool loadConfiguration(std::string intrinsic, std::string extrinsic);
         std::vector<cv::Mat>& retrieve();
         std::vector<cv::Mat>& retrieveRemapped();
         cv::Mat retrieveDisparity() {return _disparityMap.clone();}
+        cv::Mat retrieveDepthMask() {return _depthMask.clone();}
         void saveToDisk();
 
         void activateCalibration() {_activateCalibration = !_activateCalibration;}
         void showCalibrationLines() {_showCalibrationLines = !_showCalibrationLines;}
+        void setBgLearningTime(float v) {_bgLearningTime = v;}
 
     private:
         std::chrono::system_clock::time_point _startTime;
@@ -72,19 +76,26 @@ class StereoCamera
         StereoMode _stereoMode;
         bool _showCalibrationLines {false};
         bool _activateCalibration {true};
+        float _bgLearningTime {0.001};
 
         // Frames, on host and client
         std::vector<cv::Mat> _frames;
         std::vector<cv::Mat> _remappedFrames;
         std::vector<cv::cuda::GpuMat> _d_frames;
         cv::cuda::GpuMat _d_disparity;
+        cv::cuda::GpuMat _d_background;
+        cv::cuda::GpuMat _d_depthMask;
 
         std::vector<std::vector<cv::Mat>> _rmaps;
         cv::Mat _disparityMap;
+        cv::Mat _depthMask;
 
-        cv::Ptr<cv::BackgroundSubtractor> _bgSubtractor;
         cv::Ptr<cv::StereoMatcher> _stereoMatcher;
         cv::Ptr<cv::cuda::DisparityBilateralFilter> _disparityFilter;
+
+        cv::Ptr<cv::BackgroundSubtractor> _bgSubtractor;
+        cv::Ptr<cv::cuda::Filter> _closeFilter;
+        cv::Ptr<cv::cuda::Filter> _dilateFilter;
 
         unsigned int _captureIndex {0};
 
@@ -97,6 +108,11 @@ class StereoCamera
         };
         std::vector<Calibration> _calibrations;
         bool _calibrationLoaded {false};
+
+        bool correctImages();
+        void computeDisparity();
+        void computeBackground();
+        void computeMask();
 
         void init(std::vector<int> camIndices);
 };

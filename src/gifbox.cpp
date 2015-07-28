@@ -52,6 +52,8 @@ struct State
 
     int fgLimit {12};
     int bgLimit {10};
+
+    float bgLearningTime {0.001};
 } _state;
 
 /*************/
@@ -71,6 +73,8 @@ void parseArguments(int argc, char** argv)
             _state.frameNbr = stoi(argv[i + 1]);
         else if ("-fps" == string(argv[i]) && i < argc - 1)
             _state.fps = stof(argv[i + 1]);
+        else if ("-bgLearningTime" == string(argv[i]) && i < argc - 1)
+            _state.bgLearningTime = stof(argv[i + 1]);
         ++i;
     }
 }
@@ -104,6 +108,7 @@ int main(int argc, char** argv)
     vector<int> camIndices {_state.cam1, _state.cam2};
     StereoCamera stereoCamera(camIndices, StereoCamera::StereoMode::CSBP);
     stereoCamera.loadConfiguration("intrinsics.yml", "extrinsics.yml");
+    stereoCamera.setBgLearningTime(_state.bgLearningTime);
 
     // Prepare v4l2 loopback
     unique_ptr<V4l2Output> v4l2sink;
@@ -118,8 +123,8 @@ int main(int argc, char** argv)
 
         if (stereoCamera)
         {
-            stereoCamera.computeDisparity();
-            cv::Mat disparity = stereoCamera.retrieveDisparity();
+            stereoCamera.compute();
+            cv::Mat depthMask = stereoCamera.retrieveDepthMask();
 
             vector<cv::Mat> remappedFrames = stereoCamera.retrieveRemapped();
 
@@ -130,17 +135,20 @@ int main(int argc, char** argv)
                 cv::imshow(name, frame);
                 index++;
             }
-            cv::imshow("disparity", disparity);
+            cv::imshow("depthMask", depthMask);
 
             // Get current film frame
             auto frame = films[0].getCurrentFrame();
             auto frameMask = films[0].getCurrentMask();
 
             cv::Mat cameraMaskBG, cameraMaskFG;
-            cv::threshold(disparity, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY);
-            cv::threshold(disparity, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY);
+            cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY);
+            cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY);
             auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], remappedFrames[0], frame[0], remappedFrames[0]},
                                                                {cameraMaskBG, frameMask[0], cameraMaskFG});
+
+            //auto finalImage = layerMerger.mergeLayersWithMasks({frame[1], frame[0]},
+            //                                                   {frameMask[0]});
 
             cv::Mat finalImageFlipped;
             cv::flip(finalImage, finalImageFlipped, 1);
