@@ -68,6 +68,7 @@ class StereoCamera
         void activateCalibration() {_activateCalibration = !_activateCalibration;}
         void showCalibrationLines() {_showCalibrationLines = !_showCalibrationLines;}
         void setBgLearningTime(float v) {_bgLearningTime = v;}
+        void setWhiteBalance(float r, float b) {_balanceRed = r; _balanceBlue = b;}
 
     private:
         std::chrono::system_clock::time_point _startTime;
@@ -77,6 +78,10 @@ class StereoCamera
         bool _showCalibrationLines {false};
         bool _activateCalibration {true};
         float _bgLearningTime {0.001};
+
+        // White balance parameters
+        float _balanceRed {1.f};
+        float _balanceBlue {1.f};
 
         // Frames, on host and client
         std::vector<cv::Mat> _frames;

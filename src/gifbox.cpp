@@ -54,6 +54,9 @@ struct State
     int bgLimit {10};
 
     float bgLearningTime {0.001};
+
+    float balanceRed {1.f};
+    float balanceBlue {1.f};
 } _state;
 
 /*************/
@@ -233,6 +236,26 @@ int main(int argc, char** argv)
         case 'k': // FG backward
             _state.bgLimit--;
             cout << "Background: " << _state.bgLimit << endl;
+            break;
+        case 't': // WB Blue
+            _state.balanceBlue += 0.05f;
+            cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
+            break;
+        case 'g': // WB Blue
+            _state.balanceBlue -= 0.05f;
+            cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
+            break;
+        case 'r': // WB Red
+            _state.balanceRed += 0.05f;
+            cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
+            break;
+        case 'f': // WB Red
+            _state.balanceRed -= 0.05f;
+            cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
             break;
         }
     }

@@ -190,6 +190,14 @@ bool StereoCamera::grab()
         state &= _cameras[i].retrieve(rawFrame, 0);
         cv::Mat bayerFrame(rawFrame.rows, rawFrame.cols, CV_8U, rawFrame.ptr());
         cv::cvtColor(bayerFrame, _frames[i], cv::COLOR_BayerGB2RGB);
+
+        // Apply white balance to the frames
+        for (int y = 0; y < _frames[i].rows; ++y)
+            for (int x = 0; x < _frames[i].cols; ++x)
+            {
+                _frames[i].at<cv::Vec3b>(y, x)[0] *= _balanceBlue;
+                _frames[i].at<cv::Vec3b>(y, x)[2] *= _balanceRed;
+            }
     }
 
     if (_showCalibrationLines)
