@@ -121,11 +121,14 @@ int main(int argc, char** argv)
 
     while(_state.run)
     {
+        auto frameBegin = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+
         // Do camera stuff
         stereoCamera.grab();
 
         if (stereoCamera)
         {
+            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
             stereoCamera.compute();
             cv::Mat depthMask = stereoCamera.retrieveDepthMask();
 
@@ -204,7 +207,10 @@ int main(int argc, char** argv)
 
         // Handle keyboard
         // TODO: more precise loop timing
-        short key = cv::waitKey(40);
+        auto frameEnd = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+        auto frameDuration = static_cast<unsigned long>(1000 / _state.fps);
+        auto sleepTime = std::min(1000ul, std::max(1ul, frameDuration - (frameEnd - frameBegin)));
+        short key = cv::waitKey(sleepTime);
         switch (key)
         {
         default:
@@ -240,22 +246,18 @@ int main(int argc, char** argv)
         case 't': // WB Blue
             _state.balanceBlue += 0.05f;
             cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
-            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
             break;
         case 'g': // WB Blue
             _state.balanceBlue -= 0.05f;
             cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
-            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
             break;
         case 'r': // WB Red
             _state.balanceRed += 0.05f;
             cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
-            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
             break;
         case 'f': // WB Red
             _state.balanceRed -= 0.05f;
             cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
-            stereoCamera.setWhiteBalance(_state.balanceRed, _state.balanceBlue);
             break;
         }
     }
