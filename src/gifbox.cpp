@@ -57,15 +57,19 @@ GifBox::GifBox(int argc, char** argv)
 
     // Load films
     _films.emplace_back("./films/" + _state.currentFilm + "/", _state.frameNbr, 2, _state.fps);
-    bool isReady = true;
-    for (auto& film : _films)
-        isReady = isReady && film;
-    if (!isReady)
+    for (auto filmIt = _films.begin(); filmIt != _films.end();)
     {
-        cout << "Could not load films. Exiting" << endl;
-        return;
+        auto film = *filmIt;
+        if (!film)
+            filmIt = _films.erase(filmIt);
+        else
+            filmIt++;
     }
-    _films[0].start();
+
+    if (_films.size() == 0)
+        cout << "Could not load films. Exiting" << endl;
+    else
+        _films[0].start();
 
     // Load cameras
     vector<int> camIndices {_state.cam1, _state.cam2};
@@ -99,6 +103,8 @@ void GifBox::run()
             cv::Mat depthMask = _stereoCamera->retrieveDepthMask();
 
             vector<cv::Mat> remappedFrames = _stereoCamera->retrieveRemapped();
+            if (remappedFrames.size() == 0)
+                remappedFrames = _stereoCamera->retrieve();
 
             unsigned int index = 0;
             for (auto& frame : remappedFrames)
@@ -107,32 +113,39 @@ void GifBox::run()
                 cv::imshow(name, frame);
                 index++;
             }
-            cv::imshow("depthMask", depthMask);
 
-            // Get current film frame
-            auto frame = _films[0].getCurrentFrame();
-            auto frameMask = _films[0].getCurrentMask();
-
-            cv::Mat cameraMaskBG, cameraMaskFG;
-            cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY);
-            cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY);
-            auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], remappedFrames[0], frame[0], remappedFrames[0]},
-                                                               {cameraMaskBG, frameMask[0], cameraMaskFG});
-
-            //auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], frame[0]},
-            //                                                   {frameMask[0]});
-
-            cv::Mat finalImageFlipped;
-            cv::flip(finalImage, finalImageFlipped, 1);
-            cv::imshow("Result", finalImageFlipped);
-
-            // Write the result to v4l2
-            if (_state.sendToV4l2)
+            if (depthMask.rows > 0 && depthMask.cols > 0)
             {
-                if (!_v4l2Sink || finalImage.rows != _v4l2Sink->getHeight() || finalImage.cols != _v4l2Sink->getWidth())
-                    _v4l2Sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video" + to_string(_state.camOut)));
-                if (*_v4l2Sink)
-                    _v4l2Sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
+                cv::imshow("depthMask", depthMask);
+
+                if (_films.size() != 0)
+                {
+                    // Get current film frame
+                    auto frame = _films[0].getCurrentFrame();
+                    auto frameMask = _films[0].getCurrentMask();
+
+                    cv::Mat cameraMaskBG, cameraMaskFG;
+                    cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY);
+                    cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY);
+                    auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], remappedFrames[0], frame[0], remappedFrames[0]},
+                                                                       {cameraMaskBG, frameMask[0], cameraMaskFG});
+
+                    //auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], frame[0]},
+                    //                                                   {frameMask[0]});
+
+                    cv::Mat finalImageFlipped;
+                    cv::flip(finalImage, finalImageFlipped, 1);
+                    cv::imshow("Result", finalImageFlipped);
+
+                    // Write the result to v4l2
+                    if (_state.sendToV4l2)
+                    {
+                        if (!_v4l2Sink || finalImage.rows != _v4l2Sink->getHeight() || finalImage.cols != _v4l2Sink->getWidth())
+                            _v4l2Sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video" + to_string(_state.camOut)));
+                        if (*_v4l2Sink)
+                            _v4l2Sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
+                    }
+                }
             }
         }
         else

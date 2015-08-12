@@ -123,10 +123,19 @@ void StereoCamera::computeDisparity()
 {
     for (unsigned int i = 0; i < _frames.size(); ++i)
     {
-        //cv::Mat gray, resizedGray;
-        //cv::cvtColor(_remappedFrames[i], gray, COLOR_BGR2GRAY);
-        //cv::resize(gray, resizedGray, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
-        _d_frames[i].upload(_remappedFrames[i]);
+        if (_stereoMode == BM)
+        {
+            cv::Mat gray, resizedGray;
+            cv::cvtColor(_remappedFrames[i], gray, COLOR_BGR2GRAY);
+            cv::resize(gray, resizedGray, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+            _d_frames[i].upload(resizedGray);
+        }
+        else
+        {
+            cv::Mat resized;
+            cv::resize(_remappedFrames[i], resized, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+            _d_frames[i].upload(resized);
+        }
     }
 
     _stereoMatcher->compute(_d_frames[0], _d_frames[1], _d_disparity);
@@ -158,7 +167,7 @@ void StereoCamera::computeDisparity()
 void StereoCamera::computeBackground()
 {
     //cv::Mat hsv;
-    //cv::cvtColor(_remappedFrames[0], hsv, cv::COLOR_RGB2HSV);
+    //cv::cvtColor(_remappedFrames[0], hsv, cv::COLOR_RGB2XYZ);
     _d_frames[0].upload(_remappedFrames[0]);
     _bgSubtractor->apply(_d_frames[0], _d_frames[1], _bgLearningTime);
     cv::cuda::threshold(_d_frames[1], _d_frames[0], 1, 255, cv::THRESH_BINARY);
@@ -167,6 +176,23 @@ void StereoCamera::computeBackground()
     cv::Mat bgSegmentation;
     _d_background.download(bgSegmentation);
     cv::imshow("bgseg", bgSegmentation);
+
+    // TEST: filter mask
+    //vector<vector<cv::Point>> contours;
+    //vector<cv::Vec4i> hierarchy;
+    //cv::findContours(bgSegmentation, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+    //cv::Mat contoursImg = cv::Mat::zeros(bgSegmentation.size(), CV_8UC3);
+    //cv::drawContours(contoursImg, contours, -1, cv::Scalar(0, 255, 0), 1);
+    //cv::imshow("contours", contoursImg);
+
+
+    // TEST: findContour + watershed
+    //cv::Mat markerMask, contoursImg;
+    //cv::Canny(_remappedFrames[0], markerMask, 50, 200, 3);
+
+    //cv::cvtColor(_remappedFrames[0], markerMask, cv::COLOR_BGR2GRAY);
+    //cv::findContours(markerMask, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+    //cout << "-------> " << contours.size() << endl;
 }
 
 /*************/

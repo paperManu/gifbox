@@ -61,7 +61,10 @@ FilmPlayer::FilmPlayer(string path, int frameNbr, int planeNbr, float fps)
         _masks.emplace_back(masks);
     }
 
-    _ready = true;
+    if (_frames.size() && _frames.size() == _frameNbr)
+        _ready = true;
+    else
+        _ready = false;
 }
 
 /*************/
