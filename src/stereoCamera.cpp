@@ -43,7 +43,8 @@ void StereoCamera::init(vector<int> camIndices)
 
     _disparityFilter = cuda::createDisparityBilateralFilter(32, 3, 3);
 
-    _bgSubtractor = cuda::createBackgroundSubtractorMOG2(500);
+    //_bgSubtractor = cuda::createBackgroundSubtractorMOG2(500);
+    _bgSubtractor = cuda::createBackgroundSubtractorMOG(500);
     Mat element = getStructuringElement(cv::MORPH_ELLIPSE, Size(5, 5));
     _closeFilter = cuda::createMorphologyFilter(cv::MORPH_CLOSE, CV_8UC1, element, Point(-1, -1), 1);
     _dilateFilter = cuda::createMorphologyFilter(cv::MORPH_DILATE, CV_8UC1, element, Point(-1, -1), 4);
@@ -122,10 +123,10 @@ void StereoCamera::computeDisparity()
 {
     for (unsigned int i = 0; i < _frames.size(); ++i)
     {
-        cv::Mat gray, resizedGray;
-        cv::cvtColor(_remappedFrames[i], gray, COLOR_BGR2GRAY);
-        cv::resize(gray, resizedGray, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
-        _d_frames[i].upload(resizedGray);
+        //cv::Mat gray, resizedGray;
+        //cv::cvtColor(_remappedFrames[i], gray, COLOR_BGR2GRAY);
+        //cv::resize(gray, resizedGray, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+        _d_frames[i].upload(_remappedFrames[i]);
     }
 
     _stereoMatcher->compute(_d_frames[0], _d_frames[1], _d_disparity);
@@ -156,6 +157,8 @@ void StereoCamera::computeDisparity()
 /*************/
 void StereoCamera::computeBackground()
 {
+    //cv::Mat hsv;
+    //cv::cvtColor(_remappedFrames[0], hsv, cv::COLOR_RGB2HSV);
     _d_frames[0].upload(_remappedFrames[0]);
     _bgSubtractor->apply(_d_frames[0], _d_frames[1], _bgLearningTime);
     cv::cuda::threshold(_d_frames[1], _d_frames[0], 1, 255, cv::THRESH_BINARY);
