@@ -26,12 +26,13 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "filmPlayer.h"
-#include "httpServer.h"
-#include "layerMerger.h"
-#include "stereoCamera.h"
-#include "v4l2output.h"
-#include "values.h"
+#include "./filmPlayer.h"
+#include "./httpServer.h"
+#include "./layerMerger.h"
+#include "./rgbdCamera.h"
+#include "./stereoCamera.h"
+#include "./v4l2output.h"
+#include "./values.h"
 
 /*************/
 class GifBox
@@ -57,19 +58,21 @@ class GifBox
             int frameNbr {0};
             float fps {5.f};
         
-            int fgLimit {12};
-            int bgLimit {10};
+            int fgLimit {30};
+            int bgLimit {45};
         
             float bgLearningTime {0.001};
         
             float balanceRed {1.f};
+            float balanceGreen {1.f};
             float balanceBlue {1.f};
         } _state;
 
         std::unique_ptr<HttpServer> _httpServer;
         std::thread _httpServerThread;
         std::vector<FilmPlayer> _films;
-        std::unique_ptr<StereoCamera> _stereoCamera;
+        //std::unique_ptr<StereoCamera> _stereoCamera;
+        std::unique_ptr<RgbdCamera> _camera;
         std::unique_ptr<V4l2Output> _v4l2Sink;
         std::unique_ptr<LayerMerger> _layerMerger;
 

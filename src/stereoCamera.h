@@ -68,7 +68,7 @@ class StereoCamera
         void activateCalibration() {_activateCalibration = !_activateCalibration;}
         void showCalibrationLines() {_showCalibrationLines = !_showCalibrationLines;}
         void setBgLearningTime(float v) {_bgLearningTime = v;}
-        void setWhiteBalance(float r, float b) {_balanceRed = r; _balanceBlue = b;}
+        void setWhiteBalance(float r, float g, float b) {_balanceRed = r; _balanceGreen = g; _balanceBlue = b;}
 
     private:
         std::chrono::system_clock::time_point _startTime;
@@ -81,6 +81,7 @@ class StereoCamera
 
         // White balance parameters
         float _balanceRed {1.f};
+        float _balanceGreen {1.f};
         float _balanceBlue {1.f};
 
         // Frames, on host and client
@@ -99,6 +100,7 @@ class StereoCamera
         cv::Ptr<cv::cuda::DisparityBilateralFilter> _disparityFilter;
 
         cv::Ptr<cv::BackgroundSubtractor> _bgSubtractor;
+        cv::Ptr<cv::BackgroundSubtractor> _bgSubtractor2;
         cv::Ptr<cv::cuda::Filter> _closeFilter;
         cv::Ptr<cv::cuda::Filter> _dilateFilter;
 
