@@ -40,6 +40,8 @@ void GifBox::parseArguments(int argc, char** argv)
             _state.fps = stof(argv[i + 1]);
         else if ("-bgLearningTime" == string(argv[i]) && i < argc - 1)
             _state.bgLearningTime = stof(argv[i + 1]);
+        else if ("-maxRecordTime" == string(argv[i]) && i < argc - 1)
+            _state.recordTimeMax = stoi(argv[i + 1]);
         ++i;
     }
 }
@@ -152,12 +154,14 @@ void GifBox::run()
             }
             else if (command.command == RequestHandler::CommandId::record)
             {
-                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result");
+                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+                _state.record = true;
             }
             else if (command.command == RequestHandler::CommandId::stop)
             {
                 _layerMerger->setSaveMerge(false);
                 _state.sendToV4l2 = false;
+                _state.record = false;
             }
             else if (command.command == RequestHandler::CommandId::start)
             {
@@ -193,6 +197,18 @@ void GifBox::processKeyEvent(short key)
         break;
     case 27: // Escape
         _state.run = false;
+        break;
+    case 32: // Space
+        if (!_state.record)
+        {
+            _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+            _state.record = true;
+        }
+        else
+        {
+            _layerMerger->setSaveMerge(false);
+            _state.record = false;
+        }
         break;
     case 'c': // enable calibration
         _camera->activateCalibration();

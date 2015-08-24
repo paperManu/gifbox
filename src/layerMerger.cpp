@@ -1,11 +1,18 @@
 #include "layerMerger.h"
 
 #include <iostream>
+#include <limits>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
 using namespace std;
+
+/*************/
+LayerMerger::LayerMerger()
+{
+    _maxRecordTime = numeric_limits<unsigned int>::max();
+}
 
 /*************/
 cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const vector<cv::Mat>& masks)
@@ -63,15 +70,26 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
         string filename = _saveBasename + "_" + to_string(_saveImageIndex) + ".png";
         cv::imwrite(filename, mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
+
+        if (_saveImageIndex >= _maxRecordTime)
+        {
+            _saveMergerResult = false;
+            _saveImageIndex = 0;
+        }
     }
 
     return mergeResult;
 }
 
 /*************/
-void LayerMerger::setSaveMerge(bool save, string basename)
+void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
 {
     _saveMergerResult = save;
     _saveBasename = basename;
     _saveImageIndex = 0;
+
+    if (maxRecordTime == 0)
+        _maxRecordTime = numeric_limits<unsigned int>::max();
+    else
+        _maxRecordTime = maxRecordTime;
 }

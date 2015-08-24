@@ -48,7 +48,9 @@ class GifBox
         {
             bool run {true};
             bool sendToV4l2 {false};
+
             bool record {false};
+            int recordTimeMax {0};
         
             int cam1 {0};
             int cam2 {1};
