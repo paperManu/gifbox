@@ -41,6 +41,8 @@ class LayerMerger
         cv::Mat _mergeResult;
 
         std::string _saveBasename {""};
+        unsigned int _saveIndex {0};
+
         bool _saveMergerResult {false};
         unsigned int _saveImageIndex {0};
 

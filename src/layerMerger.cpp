@@ -67,7 +67,7 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 
     if (_saveMergerResult)
     {
-        string filename = _saveBasename + "_" + to_string(_saveImageIndex) + ".png";
+        string filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
         cv::imwrite(filename, mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
@@ -84,6 +84,9 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 /*************/
 void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
 {
+    if (save)
+        _saveIndex++;
+
     _saveMergerResult = save;
     _saveBasename = basename;
     _saveImageIndex = 0;
