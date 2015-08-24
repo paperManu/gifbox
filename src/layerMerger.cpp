@@ -12,6 +12,9 @@ using namespace std;
 LayerMerger::LayerMerger()
 {
     _maxRecordTime = numeric_limits<unsigned int>::max();
+    
+    string filename = "red_dot.png";
+    _recordRedDot = cv::imread(filename, cv::IMREAD_COLOR);
 }
 
 /*************/
@@ -67,7 +70,11 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 
     if (_saveMergerResult)
     {
-        string filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
+        string filename;
+        if (_saveImageIndex < 10)
+            filename = _saveBasename + "_" + to_string(_saveIndex) + "_0" + to_string(_saveImageIndex) + ".png";
+        else
+            filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
         cv::imwrite(filename, mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
@@ -76,6 +83,18 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
             _saveMergerResult = false;
             _saveImageIndex = 0;
         }
+    }
+
+    // Add the red dot after having saved the image
+    if (_saveMergerResult)
+    {
+        cv::Mat tmpLayer = _recordRedDot.clone();
+        cv::Mat layer;
+
+        if (tmpLayer.size() != layers[0].size())
+            cv::resize(tmpLayer, layer, layers[0].size(), cv::INTER_LINEAR);
+
+        mergeResult += layer;
     }
 
     return mergeResult;

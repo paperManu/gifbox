@@ -41,6 +41,7 @@ class LayerMerger
 
     private:
         cv::Mat _mergeResult;
+        cv::Mat _recordRedDot;
 
         std::string _saveBasename {""};
         unsigned int _saveIndex {0};
