@@ -154,8 +154,12 @@ void GifBox::run()
             }
             else if (command.command == RequestHandler::CommandId::record)
             {
-                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
-                _state.record = true;
+                _state.record = _layerMerger->isRecording();
+                if (!_state.record)
+                {
+                    _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+                    _state.record = true;
+                }
             }
             else if (command.command == RequestHandler::CommandId::stop)
             {
@@ -199,6 +203,7 @@ void GifBox::processKeyEvent(short key)
         _state.run = false;
         break;
     case 32: // Space
+        _state.record = _layerMerger->isRecording();
         if (!_state.record)
         {
             _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);

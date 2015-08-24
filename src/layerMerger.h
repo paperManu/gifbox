@@ -37,6 +37,8 @@ class LayerMerger
         cv::Mat mergeLayersWithMasks(const std::vector<cv::Mat>& layers, const std::vector<cv::Mat>& masks);
         void setSaveMerge(bool save, std::string basename = "", int maxRecordTime =  0);
 
+        bool isRecording() {return _saveMergerResult;}
+
     private:
         cv::Mat _mergeResult;
 
