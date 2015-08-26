@@ -79,6 +79,18 @@ vector<cv::Mat>& FilmPlayer::getCurrentFrame()
     auto currentTime = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now().time_since_epoch());
     auto elapsed = (currentTime - _startTime).count();
     int frameIndex = static_cast<int>(elapsed * _fps / 1000.f) % _frameNbr;
+
+    // Store whether we changed frame
+    _frameChanged = (frameIndex != _lastIndex);
+
     _lastIndex = frameIndex;
     return _frames[frameIndex];
+}
+
+/*************/
+bool FilmPlayer::hasChangedFrame()
+{
+    bool changed = _frameChanged;
+    _frameChanged = false;
+    return changed;
 }

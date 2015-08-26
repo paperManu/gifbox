@@ -35,6 +35,7 @@ class LayerMerger
         // Layers from back to front, with one mask between each of them
         // Everything is resized to the size of the first layer
         cv::Mat mergeLayersWithMasks(const std::vector<cv::Mat>& layers, const std::vector<cv::Mat>& masks);
+        void saveFrame();
         void setSaveMerge(bool save, std::string basename = "", int maxRecordTime =  0);
 
         bool isRecording() {return _saveMergerResult;}

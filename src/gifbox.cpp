@@ -113,6 +113,10 @@ void GifBox::run()
                     auto frame = _films[0].getCurrentFrame();
                     auto frameMask = _films[0].getCurrentMask();
 
+                    // If we just changed frame in the film, we save the previous merge result
+                    if (_films[0].hasChangedFrame())
+                        _layerMerger->saveFrame();
+
                     cv::Mat cameraMaskBG, cameraMaskFG;
                     cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY_INV);
                     cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY_INV);
@@ -178,8 +182,8 @@ void GifBox::run()
         // Handle keyboard
         // TODO: more precise loop timing
         auto frameEnd = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-        auto frameDuration = static_cast<unsigned long>(1000 / _state.fps);
-        auto sleepTime = std::max(1l, (long)frameDuration - ((long)frameEnd - (long)frameBegin));
+        long frameDuration = 33; // 33ms per frame, so 30fps
+        auto sleepTime = std::max(1l, frameDuration - ((long)frameEnd - (long)frameBegin));
 
         short key = cv::waitKey(sleepTime);
         processKeyEvent(key);
