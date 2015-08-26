@@ -19,6 +19,8 @@
 
 #include "gifbox.h"
 
+#include <spawn.h>
+
 using namespace std;
 
 /*************/
@@ -114,8 +116,9 @@ void GifBox::run()
                     auto frameMask = _films[0].getCurrentMask();
 
                     // If we just changed frame in the film, we save the previous merge result
+                    bool recordEnded = false;
                     if (_films[0].hasChangedFrame())
-                        _layerMerger->saveFrame();
+                        recordEnded = _layerMerger->saveFrame();
 
                     cv::Mat cameraMaskBG, cameraMaskFG;
                     cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY_INV);

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <limits>
+#include <spawn.h>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
@@ -84,18 +85,14 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 }
 
 /*************/
-void LayerMerger::saveFrame()
+bool LayerMerger::saveFrame()
 {
     if (_mergeResult.total() == 0)
-        return;
+        return false;
 
     if (_saveMergerResult)
     {
-        string filename;
-        if (_saveImageIndex < 10)
-            filename = _saveBasename + "_" + to_string(_saveIndex) + "_0" + to_string(_saveImageIndex) + ".png";
-        else
-            filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
+        auto filename = getFilename();
         cv::imwrite(filename, _mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
@@ -103,8 +100,12 @@ void LayerMerger::saveFrame()
         {
             _saveMergerResult = false;
             _saveImageIndex = 0;
+            convertSequenceToGif();
+            return true;
         }
     }
+
+    return false;
 }
 
 /*************/
@@ -121,4 +122,26 @@ void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
         _maxRecordTime = numeric_limits<unsigned int>::max();
     else
         _maxRecordTime = maxRecordTime;
+}
+
+/*************/
+string LayerMerger::getFilename()
+{
+    string filename;
+    if (_saveImageIndex < 10)
+        filename = _saveBasename + "_" + to_string(_saveIndex) + "_0" + to_string(_saveImageIndex) + ".png";
+    else
+        filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
+    return filename;
+}
+
+/*************/
+void LayerMerger::convertSequenceToGif()
+{
+    auto basename = _saveImageIndex + "_" + to_string(_saveIndex);
+    string cmd = "convertToGif";
+    char* argv[] = {(char*)"convertToGif", (char*)basename.c_str(), nullptr};
+
+    int pid;
+    int status = posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
 }
