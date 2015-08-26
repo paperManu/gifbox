@@ -43,8 +43,11 @@ class FilmPlayer
         }
 
         void start();
+
+        // Get the current frame based on time and fps. The first one also updates the frameChanged status
         std::vector<cv::Mat>& getCurrentFrame();
         std::vector<cv::Mat>& getCurrentMask() {return _masks[_lastIndex];}
+        bool hasChangedFrame();
 
     private:
         std::string _path {};
@@ -53,6 +56,7 @@ class FilmPlayer
         float _fps {10.f};
 
         bool _ready {false};
+        bool _frameChanged {false};
         int _lastIndex {0};
         std::vector<std::vector<cv::Mat>> _frames;
         std::vector<std::vector<cv::Mat>> _masks; // frameNbr - 1 masks total, one between each layer

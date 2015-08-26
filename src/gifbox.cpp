@@ -40,6 +40,8 @@ void GifBox::parseArguments(int argc, char** argv)
             _state.fps = stof(argv[i + 1]);
         else if ("-bgLearningTime" == string(argv[i]) && i < argc - 1)
             _state.bgLearningTime = stof(argv[i + 1]);
+        else if ("-maxRecordTime" == string(argv[i]) && i < argc - 1)
+            _state.recordTimeMax = stoi(argv[i + 1]);
         ++i;
     }
 }
@@ -67,15 +69,12 @@ GifBox::GifBox(int argc, char** argv)
     }
 
     if (_films.size() == 0)
-        cout << "Could not load films. Exiting" << endl;
+        cout << "Could not load films." << endl;
     else
         _films[0].start();
 
-    // Load cameras
-    vector<int> camIndices {_state.cam1, _state.cam2};
-    _stereoCamera = unique_ptr<StereoCamera>(new StereoCamera(camIndices, StereoCamera::StereoMode::CSBP));
-    _stereoCamera->loadConfiguration("intrinsics.yml", "extrinsics.yml");
-    _stereoCamera->setBgLearningTime(_state.bgLearningTime);
+    // Load camera
+    _camera = unique_ptr<RgbdCamera>(new RgbdCamera());
 
     // And the layer merger
     _layerMerger = unique_ptr<LayerMerger>(new LayerMerger());
@@ -94,25 +93,15 @@ void GifBox::run()
         auto frameBegin = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
         // Do camera stuff
-        _stereoCamera->grab();
+        _camera->grab();
 
-        if (_stereoCamera)
+        if (_camera)
         {
-            _stereoCamera->setWhiteBalance(_state.balanceRed, _state.balanceBlue);
-            _stereoCamera->compute();
-            cv::Mat depthMask = _stereoCamera->retrieveDepthMask();
+            _camera->setWhiteBalance(_state.balanceRed, _state.balanceGreen, _state.balanceBlue);
+            cv::Mat depthMask = _camera->retrieveDepthMask();
 
-            vector<cv::Mat> remappedFrames = _stereoCamera->retrieveRemapped();
-            if (remappedFrames.size() == 0)
-                remappedFrames = _stereoCamera->retrieve();
-
-            unsigned int index = 0;
-            for (auto& frame : remappedFrames)
-            {
-                string name = "Camera remapped" + to_string(index);
-                cv::imshow(name, frame);
-                index++;
-            }
+            auto rgbFrame = _camera->retrieveRGB();
+            cv::imshow("RGB Camera", rgbFrame);
 
             if (depthMask.rows > 0 && depthMask.cols > 0)
             {
@@ -124,14 +113,15 @@ void GifBox::run()
                     auto frame = _films[0].getCurrentFrame();
                     auto frameMask = _films[0].getCurrentMask();
 
-                    cv::Mat cameraMaskBG, cameraMaskFG;
-                    cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY);
-                    cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY);
-                    auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], remappedFrames[0], frame[0], remappedFrames[0]},
-                                                                       {cameraMaskBG, frameMask[0], cameraMaskFG});
+                    // If we just changed frame in the film, we save the previous merge result
+                    if (_films[0].hasChangedFrame())
+                        _layerMerger->saveFrame();
 
-                    //auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], frame[0]},
-                    //                                                   {frameMask[0]});
+                    cv::Mat cameraMaskBG, cameraMaskFG;
+                    cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY_INV);
+                    cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY_INV);
+                    auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], rgbFrame, frame[0], rgbFrame},
+                                                                       {cameraMaskBG, frameMask[0], cameraMaskFG});
 
                     cv::Mat finalImageFlipped;
                     cv::flip(finalImage, finalImageFlipped, 1);
@@ -150,10 +140,8 @@ void GifBox::run()
         }
         else
         {
-            auto rawFrames = _stereoCamera->retrieve();
-            int rawFrameIndex = 0;
-            for (auto& frame : rawFrames)
-                cv::imshow("Raw Frame " + to_string(rawFrameIndex++), frame);
+            auto rgbFrame = _camera->retrieveRGB();
+            cv::imshow("Raw Frame", rgbFrame);
         }
 
         // Handle HTTP requests
@@ -170,12 +158,18 @@ void GifBox::run()
             }
             else if (command.command == RequestHandler::CommandId::record)
             {
-                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result");
+                _state.record = _layerMerger->isRecording();
+                if (!_state.record)
+                {
+                    _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+                    _state.record = true;
+                }
             }
             else if (command.command == RequestHandler::CommandId::stop)
             {
                 _layerMerger->setSaveMerge(false);
                 _state.sendToV4l2 = false;
+                _state.record = false;
             }
             else if (command.command == RequestHandler::CommandId::start)
             {
@@ -188,8 +182,8 @@ void GifBox::run()
         // Handle keyboard
         // TODO: more precise loop timing
         auto frameEnd = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-        auto frameDuration = static_cast<unsigned long>(1000 / _state.fps);
-        auto sleepTime = std::max(1l, (long)frameDuration - ((long)frameEnd - (long)frameBegin));
+        long frameDuration = 33; // 33ms per frame, so 30fps
+        auto sleepTime = std::max(1l, frameDuration - ((long)frameEnd - (long)frameBegin));
 
         short key = cv::waitKey(sleepTime);
         processKeyEvent(key);
@@ -212,14 +206,27 @@ void GifBox::processKeyEvent(short key)
     case 27: // Escape
         _state.run = false;
         break;
+    case 32: // Space
+        _state.record = _layerMerger->isRecording();
+        if (!_state.record)
+        {
+            _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+            _state.record = true;
+        }
+        else
+        {
+            _layerMerger->setSaveMerge(false);
+            _state.record = false;
+        }
+        break;
     case 'c': // enable calibration
-        _stereoCamera->activateCalibration();
+        _camera->activateCalibration();
         break;
     case 'l': // show calibration lines
-        _stereoCamera->showCalibrationLines();
+        _camera->showCalibrationLines();
         break;
     case 's': // Save images to disk
-        _stereoCamera->saveToDisk();
+        _camera->saveToDisk();
         break;
     case 'u': // FG forward
         _state.fgLimit++;
@@ -239,19 +246,27 @@ void GifBox::processKeyEvent(short key)
         break;
     case 't': // WB Blue
         _state.balanceBlue += 0.05f;
-        cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
         break;
     case 'g': // WB Blue
         _state.balanceBlue -= 0.05f;
-        cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
         break;
-    case 'r': // WB Red
+    case 'r': // WB Green
+        _state.balanceGreen += 0.05f;
+        cout << "White balance red / green / blue : " << _state.balanceGreen << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
+        break;
+    case 'f': // WB Green
+        _state.balanceGreen -= 0.05f;
+        cout << "White balance red / green / blue : " << _state.balanceGreen << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
+        break;
+    case 'e': // WB Red
         _state.balanceRed += 0.05f;
-        cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
         break;
-    case 'f': // WB Red
+    case 'd': // WB Red
         _state.balanceRed -= 0.05f;
-        cout << "White balance red / blue : " << _state.balanceRed << " / " << _state.balanceBlue << endl;
+        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
         break;
     }
 }

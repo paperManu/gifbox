@@ -1,11 +1,21 @@
 #include "layerMerger.h"
 
 #include <iostream>
+#include <limits>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 
 using namespace std;
+
+/*************/
+LayerMerger::LayerMerger()
+{
+    _maxRecordTime = numeric_limits<unsigned int>::max();
+    
+    string filename = "red_dot.png";
+    _recordRedDot = cv::imread(filename, cv::IMREAD_COLOR);
+}
 
 /*************/
 cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const vector<cv::Mat>& masks)
@@ -58,20 +68,57 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 
     _mergeResult = mergeResult;
 
+    // Add the red dot after having saved the image
     if (_saveMergerResult)
     {
-        string filename = _saveBasename + "_" + to_string(_saveImageIndex) + ".png";
-        cv::imwrite(filename, mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
-        _saveImageIndex++;
+        cv::Mat tmpLayer = _recordRedDot.clone();
+        cv::Mat layer;
+
+        if (tmpLayer.size() != layers[0].size())
+            cv::resize(tmpLayer, layer, layers[0].size(), cv::INTER_LINEAR);
+
+        mergeResult += layer;
     }
 
     return mergeResult;
 }
 
 /*************/
-void LayerMerger::setSaveMerge(bool save, string basename)
+void LayerMerger::saveFrame()
 {
+    if (_mergeResult.total() == 0)
+        return;
+
+    if (_saveMergerResult)
+    {
+        string filename;
+        if (_saveImageIndex < 10)
+            filename = _saveBasename + "_" + to_string(_saveIndex) + "_0" + to_string(_saveImageIndex) + ".png";
+        else
+            filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
+        cv::imwrite(filename, _mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
+        _saveImageIndex++;
+
+        if (_saveImageIndex >= _maxRecordTime)
+        {
+            _saveMergerResult = false;
+            _saveImageIndex = 0;
+        }
+    }
+}
+
+/*************/
+void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
+{
+    if (save)
+        _saveIndex++;
+
     _saveMergerResult = save;
     _saveBasename = basename;
     _saveImageIndex = 0;
+
+    if (maxRecordTime == 0)
+        _maxRecordTime = numeric_limits<unsigned int>::max();
+    else
+        _maxRecordTime = maxRecordTime;
 }

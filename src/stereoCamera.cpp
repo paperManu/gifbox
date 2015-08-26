@@ -43,10 +43,14 @@ void StereoCamera::init(vector<int> camIndices)
 
     _disparityFilter = cuda::createDisparityBilateralFilter(32, 3, 3);
 
-    //_bgSubtractor = cuda::createBackgroundSubtractorMOG2(500);
-    _bgSubtractor = cuda::createBackgroundSubtractorMOG(500);
+    _bgSubtractor = cuda::createBackgroundSubtractorMOG2(500, 16, true);
+    //_bgSubtractor.dynamicCast<cv::BackgroundSubtractorMOG2>()->setNMixtures(8);
+    //_bgSubtractor.dynamicCast<cv::BackgroundSubtractorMOG2>()->setShadowThreshold(0.01f);
+    
+    //_bgSubtractor = cuda::createBackgroundSubtractorMOG(); //200, 7, 0.5, 0.0);
+
     Mat element = getStructuringElement(cv::MORPH_ELLIPSE, Size(5, 5));
-    _closeFilter = cuda::createMorphologyFilter(cv::MORPH_CLOSE, CV_8UC1, element, Point(-1, -1), 1);
+    _closeFilter = cuda::createMorphologyFilter(cv::MORPH_CLOSE, CV_8UC1, element, Point(-1, -1), 2);
     _dilateFilter = cuda::createMorphologyFilter(cv::MORPH_DILATE, CV_8UC1, element, Point(-1, -1), 4);
 }
 
@@ -167,32 +171,55 @@ void StereoCamera::computeDisparity()
 void StereoCamera::computeBackground()
 {
     //cv::Mat hsv;
-    //cv::cvtColor(_remappedFrames[0], hsv, cv::COLOR_RGB2XYZ);
+    //cv::cvtColor(_remappedFrames[0], hsv, cv::COLOR_RGB2HSV);
     _d_frames[0].upload(_remappedFrames[0]);
     _bgSubtractor->apply(_d_frames[0], _d_frames[1], _bgLearningTime);
-    cv::cuda::threshold(_d_frames[1], _d_frames[0], 1, 255, cv::THRESH_BINARY);
+    cv::cuda::threshold(_d_frames[1], _d_frames[0], 200, 255, cv::THRESH_BINARY);
     _closeFilter->apply(_d_frames[0], _d_background);
 
     cv::Mat bgSegmentation;
     _d_background.download(bgSegmentation);
     cv::imshow("bgseg", bgSegmentation);
 
+    //cv::Scalar sum = cv::sum(bgSegmentation);
+    //if (sum[0] != 0)
+    //{
+    //    cv::Mat resizedRGB, resizedBG;
+    //    cv::resize(_remappedFrames[0], resizedRGB, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+    //    cv::resize(bgSegmentation, resizedBG, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+    //    cv::threshold(resizedBG, resizedBG, 127, 255, cv::THRESH_BINARY);
+
+    //    cv::Mat gcMask = cv::Mat::ones(resizedBG.size(), CV_8UC1) * cv::GC_PR_BGD;
+    //    gcMask = gcMask + (resizedBG / 255) * (cv::GC_PR_FGD - GC_PR_BGD);
+    //    cv::Mat bgModel, fgModel;
+    //    cv::grabCut(resizedRGB, gcMask, cv::Rect(), bgModel, fgModel, 1, cv::GC_INIT_WITH_MASK);
+    //    cv::imshow("grabCut", gcMask * 40);
+    //}
+
     // TEST: filter mask
-    //vector<vector<cv::Point>> contours;
-    //vector<cv::Vec4i> hierarchy;
-    //cv::findContours(bgSegmentation, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
-    //cv::Mat contoursImg = cv::Mat::zeros(bgSegmentation.size(), CV_8UC3);
-    //cv::drawContours(contoursImg, contours, -1, cv::Scalar(0, 255, 0), 1);
-    //cv::imshow("contours", contoursImg);
+    vector<vector<cv::Point>> contours;
+    vector<cv::Vec4i> hierarchy;
+    cv::findContours(bgSegmentation, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    cv::Mat contoursImg = cv::Mat::zeros(bgSegmentation.size(), CV_8UC3);
 
+    if (hierarchy.size() == 0)
+        return;
 
-    // TEST: findContour + watershed
-    //cv::Mat markerMask, contoursImg;
-    //cv::Canny(_remappedFrames[0], markerMask, 50, 200, 3);
-
-    //cv::cvtColor(_remappedFrames[0], markerMask, cv::COLOR_BGR2GRAY);
-    //cv::findContours(markerMask, contours, hierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
-    //cout << "-------> " << contours.size() << endl;
+    int largestComp = 0;
+    double maxArea = 0;
+    for (int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+    {
+        const vector<cv::Point>& c = contours[idx];
+        double area = fabs(cv::contourArea(Mat(c)));
+        if (area > maxArea)
+        {
+            maxArea = area;
+            largestComp = idx;
+        }
+    }
+    Scalar color(0, 0, 255);
+    cv::drawContours(contoursImg, contours, largestComp, cv::Scalar(0, 255, 0), cv::FILLED, LINE_8, hierarchy);
+    cv::imshow("contours", contoursImg);
 }
 
 /*************/
@@ -225,6 +252,7 @@ bool StereoCamera::grab()
             for (int x = 0; x < _frames[i].cols; ++x)
             {
                 _frames[i].at<cv::Vec3b>(y, x)[0] *= _balanceBlue;
+                _frames[i].at<cv::Vec3b>(y, x)[1] *= _balanceGreen;
                 _frames[i].at<cv::Vec3b>(y, x)[2] *= _balanceRed;
             }
     }
