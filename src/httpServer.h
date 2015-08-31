@@ -188,6 +188,7 @@ class RequestHandler
         {
             nop,
             record,
+            setFilm,
             start,
             stop,
             quit

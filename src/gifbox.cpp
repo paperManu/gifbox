@@ -180,6 +180,34 @@ void GifBox::run()
                     _state.record = true;
                 }
             }
+            else if (command.command == RequestHandler::CommandId::setFilm)
+            {
+                if (command.args.size() < 3)
+                {
+                    message.second(false, {"Need to specify film name, frame number and framerate"});
+                }
+                else
+                {
+                    auto filename = command.args[0].asString();
+                    int frameNbr = command.args[1].asInt();
+                    float frameRate = command.args[2].asFloat();
+                    FilmPlayer film("./films/" + filename + "/", frameNbr, 2, frameRate);
+                    if (film)
+                    {
+                        _films.clear();
+                        _films.push_back(film);
+                        _films[0].start();
+                        _state.currentFilm = filename;
+                        _state.frameNbr = frameNbr;
+                        _state.fps = frameRate;
+                        message.second(true, {"Success"});
+                    }
+                    else
+                    {
+                        message.second(false, {"Failed"});
+                    }
+                }
+            }
             else if (command.command == RequestHandler::CommandId::stop)
             {
                 _layerMerger->setSaveMerge(false);
