@@ -22,9 +22,9 @@ RgbdCamera::RgbdCamera()
 /*************/
 RgbdCamera::~RgbdCamera()
 {
-    _camera->stopVideo();
-    _camera->stopDepth();
-    _freenectCtx.deleteDevice(0);
+    //_camera->stopVideo();
+    //_camera->stopDepth();
+    //_freenectCtx.deleteDevice(0);
 }
 
 /*************/
