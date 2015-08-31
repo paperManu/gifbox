@@ -50,6 +50,8 @@ void GifBox::parseArguments(int argc, char** argv)
             _state.recordTimeMax = stoi(argv[i + 1]);
         else if ("-out" == string(argv[i]) && i < argc - 1)
             _state.camOut = stoi(argv[i + 1]);
+        else
+            cout << "Unrecognized argument: " << argv[i] << endl;
         ++i;
     }
 }
@@ -137,13 +139,17 @@ void GifBox::run()
                     cv::imshow("Result", finalImageFlipped);
 
                     // Write the result to v4l2
-                    if (_state.sendToV4l2)
-                    {
+                    //if (_state.sendToV4l2)
+                    //{
                         if (!_v4l2Sink || finalImage.rows != _v4l2Sink->getHeight() || finalImage.cols != _v4l2Sink->getWidth())
                             _v4l2Sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video" + to_string(_state.camOut)));
                         if (*_v4l2Sink)
-                            _v4l2Sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
-                    }
+                        {
+                            cv::Mat rgbImage;
+                            cv::cvtColor(finalImage, rgbImage, cv::COLOR_BGR2RGB);
+                            _v4l2Sink->writeToDevice(rgbImage.data, rgbImage.total() * rgbImage.elemSize());
+                        }
+                    //}
                 }
             }
         }
