@@ -141,6 +141,11 @@ void GifBox::run()
                     auto frame = _films[0].getCurrentFrame();
                     auto frameMask = _films[0].getCurrentMask();
 
+                    // If we just changed frame in the film, we save the previous merge result
+                    bool recordEnded = false;
+                    if (_films[0].hasChangedFrame())
+                        recordEnded = _layerMerger->saveFrame();
+
                     cv::Mat cameraMaskBG, cameraMaskFG;
                     cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY_INV);
                     cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY_INV);
