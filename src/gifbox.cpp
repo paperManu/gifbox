@@ -215,12 +215,14 @@ void GifBox::processKeyEvent(short key)
         {
             _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
             _state.record = true;
+            cv::waitKey(1000);
+            //this_thread::sleep_for(chrono::seconds(1));
         }
-        else
-        {
-            _layerMerger->setSaveMerge(false);
-            _state.record = false;
-        }
+        //else
+        //{
+        //    _layerMerger->setSaveMerge(false);
+        //    _state.record = false;
+        //}
         break;
     case 'c': // enable calibration
         _camera->activateCalibration();

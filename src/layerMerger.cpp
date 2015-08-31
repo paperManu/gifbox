@@ -138,7 +138,7 @@ string LayerMerger::getFilename()
 /*************/
 void LayerMerger::convertSequenceToGif()
 {
-    auto basename = _saveImageIndex + "_" + to_string(_saveIndex);
+    auto basename = "gifbox_result_" + to_string(_saveIndex);
     string cmd = "convertToGif";
     char* argv[] = {(char*)"convertToGif", (char*)basename.c_str(), nullptr};
 
