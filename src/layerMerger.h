@@ -32,6 +32,9 @@ class LayerMerger
     public:
         LayerMerger();
 
+        // Get the name of the latest recorded gif
+        std::string getLastRecord() {return _lastRecordName;}
+
         // Layers from back to front, with one mask between each of them
         // Everything is resized to the size of the first layer
         cv::Mat mergeLayersWithMasks(const std::vector<cv::Mat>& layers, const std::vector<cv::Mat>& masks);
@@ -55,6 +58,7 @@ class LayerMerger
         unsigned int _saveImageIndex {0};
 
         unsigned int _maxRecordTime {0};
+        std::string _lastRecordName {""};
 
         std::string getFilename();
 

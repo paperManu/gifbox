@@ -666,6 +666,10 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
 
     if (requestPath.find("/camera/start") == 0)
         _commandQueue.push_back({CommandId::start, requestArgs});
+    else if (requestPath.find("/getRecordName") == 0)
+        _commandQueue.push_back({CommandId::getRecordName, requestArgs});
+    else if (requestPath.find("/isRecording") == 0)
+        _commandQueue.push_back({CommandId::isRecording, requestArgs});
     else if (requestPath.find("/camera/record") == 0)
         _commandQueue.push_back({CommandId::record, requestArgs});
     else if (requestPath.find("/camera/stop") == 0)
