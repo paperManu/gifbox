@@ -41,17 +41,35 @@ void GifBox::parseArguments(int argc, char** argv)
     for (int i = 1; i < argc;)
     {
         if ("-film" == string(argv[i]) && i < argc - 1)
+        {
             _state.currentFilm = string(argv[i + 1]);
+            ++i;
+        }
         else if ("-frameNbr" == string(argv[i]) && i < argc - 1)
+        {
             _state.frameNbr = stoi(argv[i + 1]);
+            ++i;
+        }
         else if ("-fps" == string(argv[i]) && i < argc - 1)
+        {
             _state.fps = stof(argv[i + 1]);
+            ++i;
+        }
         else if ("-maxRecordTime" == string(argv[i]) && i < argc - 1)
+        {
             _state.recordTimeMax = stoi(argv[i + 1]);
+            ++i;
+        }
         else if ("-out" == string(argv[i]) && i < argc - 1)
+        {
             _state.camOut = stoi(argv[i + 1]);
+            ++i;
+        }
         else
+        {
             cout << "Unrecognized argument: " << argv[i] << endl;
+        }
+
         ++i;
     }
 }
@@ -170,6 +188,7 @@ void GifBox::run()
             if (command.command == RequestHandler::CommandId::quit)
             {
                 _state.run = false;
+                message.second(true, {"Default reply"});
             }
             else if (command.command == RequestHandler::CommandId::record)
             {
@@ -179,18 +198,19 @@ void GifBox::run()
                     _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
                     _state.record = true;
                 }
+                message.second(true, {"Default reply"});
             }
             else if (command.command == RequestHandler::CommandId::setFilm)
             {
-                if (command.args.size() < 3)
+                if (command.args.size() < 4)
                 {
-                    message.second(false, {"Need to specify film name, frame number and framerate"});
+                    message.second(true, {"Need to specify film name, frame number and framerate"});
                 }
                 else
                 {
-                    auto filename = command.args[0].asString();
-                    int frameNbr = command.args[1].asInt();
-                    float frameRate = command.args[2].asFloat();
+                    auto filename = command.args[1].asString();
+                    int frameNbr = command.args[2].asInt();
+                    float frameRate = command.args[3].asFloat();
                     FilmPlayer film("./films/" + filename + "/", frameNbr, 2, frameRate);
                     if (film)
                     {
@@ -204,7 +224,7 @@ void GifBox::run()
                     }
                     else
                     {
-                        message.second(false, {"Failed"});
+                        message.second(true, {"Failed"});
                     }
                 }
             }
@@ -213,13 +233,13 @@ void GifBox::run()
                 _layerMerger->setSaveMerge(false);
                 _state.sendToV4l2 = false;
                 _state.record = false;
+                message.second(true, {"Default reply"});
             }
             else if (command.command == RequestHandler::CommandId::start)
             {
                 _state.sendToV4l2 = true;
+                message.second(true, {"Default reply"});
             }
-
-            message.second(true, {"Default reply"});
         }
 
         // Handle keyboard

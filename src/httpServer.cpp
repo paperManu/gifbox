@@ -686,9 +686,9 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
     Values replyValues {};
 
     auto replyFunc = [&](bool reply, Values answer) -> void {
-        cv.notify_all();
         replyState = reply;
         replyValues = answer;
+        cv.notify_all();
     };
 
     _commandReturnFuncQueue.push_back(replyFunc);
