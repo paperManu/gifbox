@@ -26,24 +26,30 @@ using namespace std;
 /*************/
 void GifBox::parseArguments(int argc, char** argv)
 {
+    if (argc == 1)
+    {
+        cout << "Gifbox engine - Where the fun is assembled!" << endl;
+        cout << "Basic usage: gifengine -film FILENAME -frameNbr FRAMENBR -fps FPS" << endl;
+        cout << "Parameters:" << endl;
+        cout << "  -film: specify the name of the directory in which the film is stored" << endl;
+        cout << "  -frameNbr: set the number of frames for the given film" << endl;
+        cout << "  -fps: set the framerate" << endl;
+        cout << "  -maxRecordTime: set the maximum number of frames recorded" << endl;
+        cout << "  -out: set the output v4l2 device, defaults to 0" << endl;
+        exit(0);
+    }
     for (int i = 1; i < argc;)
     {
-        if ("-cam1" == string(argv[i]) && i < argc - 1)
-            _state.cam1 = stoi(argv[i + 1]);
-        else if ("-cam2" == string(argv[i]) && i < argc - 1)
-            _state.cam2 = stoi(argv[i + 1]);
-        else if ("-out" == string(argv[i]) && i < argc - 1)
-            _state.camOut = stoi(argv[i + 1]);
-        else if ("-film" == string(argv[i]) && i < argc - 1)
+        if ("-film" == string(argv[i]) && i < argc - 1)
             _state.currentFilm = string(argv[i + 1]);
         else if ("-frameNbr" == string(argv[i]) && i < argc - 1)
             _state.frameNbr = stoi(argv[i + 1]);
         else if ("-fps" == string(argv[i]) && i < argc - 1)
             _state.fps = stof(argv[i + 1]);
-        else if ("-bgLearningTime" == string(argv[i]) && i < argc - 1)
-            _state.bgLearningTime = stof(argv[i + 1]);
         else if ("-maxRecordTime" == string(argv[i]) && i < argc - 1)
             _state.recordTimeMax = stoi(argv[i + 1]);
+        else if ("-out" == string(argv[i]) && i < argc - 1)
+            _state.camOut = stoi(argv[i + 1]);
         ++i;
     }
 }
@@ -103,11 +109,11 @@ void GifBox::run()
             cv::Mat depthMask = _camera->retrieveDepthMask();
 
             auto rgbFrame = _camera->retrieveRGB();
-            cv::imshow("RGB Camera", rgbFrame);
+            //cv::imshow("RGB Camera", rgbFrame);
 
             if (depthMask.rows > 0 && depthMask.cols > 0)
             {
-                cv::imshow("depthMask", depthMask);
+                //cv::imshow("depthMask", depthMask);
 
                 if (_films.size() != 0)
                 {

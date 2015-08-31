@@ -52,9 +52,9 @@ class GifBox
             bool record {false};
             int recordTimeMax {0};
         
-            int cam1 {0};
-            int cam2 {1};
-            int camOut {2};
+            int cam1 {1};
+            int cam2 {2};
+            int camOut {0};
         
             std::string currentFilm {"ALL_THE_RAGE"};
             int frameNbr {0};
