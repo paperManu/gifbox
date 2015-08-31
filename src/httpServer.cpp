@@ -670,11 +670,11 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
         _commandQueue.push_back({CommandId::getRecordName, requestArgs});
     else if (requestPath.find("/isRecording") == 0)
         _commandQueue.push_back({CommandId::isRecording, requestArgs});
-    else if (requestPath.find("/camera/record") == 0)
+    else if (requestPath.find("/record") == 0)
         _commandQueue.push_back({CommandId::record, requestArgs});
-    else if (requestPath.find("/camera/stop") == 0)
+    else if (requestPath.find("/stopRecording") == 0)
         _commandQueue.push_back({CommandId::stop, requestArgs});
-    else if (requestPath.find("/film/set") == 0)
+    else if (requestPath.find("/setFilm") == 0)
         _commandQueue.push_back({CommandId::setFilm, requestArgs});
     else if (requestPath.find("/quit") == 0)
         _commandQueue.push_back({CommandId::quit, requestArgs});
