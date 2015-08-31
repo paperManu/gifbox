@@ -48,7 +48,6 @@ bool RgbdCamera::grab()
         cv::morphologyEx(fgMask, fgMask, cv::MORPH_DILATE, _dilateElement);
         fgMask = 255 - fgMask;
         unknownMask += fgMask;
-        cv::imshow("test", fgMask);
         _depthMask = _depthMask + unknownMask;
         
         cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);

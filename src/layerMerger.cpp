@@ -67,7 +67,7 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
             }
     }
 
-    _mergeResult = mergeResult;
+    _mergeResult = mergeResult.clone();
 
     // Add the red dot after having saved the image
     if (_saveMergerResult)
