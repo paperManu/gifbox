@@ -1,5 +1,5 @@
 #!/bin/bash
 cd /tmp
 SHELL=/bin/bash HOME=/home/gifbox parallel 'mogrify -format gif {}' ::: $@*
-#gifasm -a $@*.gif > $@.gif
 convert -delay 0.8 -loop 0 $@*.gif $@.gif
+rm $@_*.gif $@_*.png
