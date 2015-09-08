@@ -112,10 +112,7 @@ class RgbdCamera
 
         explicit operator bool() const
         {
-            if (isReady())
-                return true;
-            else
-                return false;
+            return _ready;
         }
 
         bool grab();
@@ -130,6 +127,7 @@ class RgbdCamera
         void setWhiteBalance(float r, float g, float b) {_balanceRed = r; _balanceGreen = g; _balanceBlue = b;}
 
     private:
+        bool _ready {false};
         Freenect::Freenect _freenectCtx;
         FreenectCamera* _camera;
 

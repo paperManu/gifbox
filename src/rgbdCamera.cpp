@@ -5,18 +5,27 @@ using namespace std;
 /*************/
 RgbdCamera::RgbdCamera()
 {
-    _camera = &_freenectCtx.createDevice<FreenectCamera>(0);
-    _camera->startVideo();
-    _camera->startDepth();
+    try
+    {
+        _camera = &_freenectCtx.createDevice<FreenectCamera>(0);
+        _camera->startVideo();
+        _camera->startDepth();
 
-    auto depthFormat = FREENECT_DEPTH_REGISTERED;
-    _camera->setDepthFormat(depthFormat);
+        auto depthFormat = FREENECT_DEPTH_REGISTERED;
+        _camera->setDepthFormat(depthFormat);
 
-    // Prepare filters
-    _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10));
-    _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
-    _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
-    _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 4, false);
+        // Prepare filters
+        _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10));
+        _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
+        _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
+        _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 4, false);
+
+        _ready = true;
+    }
+    catch (...)
+    {
+        _ready = false;
+    }
 }
 
 /*************/
@@ -59,7 +68,7 @@ bool RgbdCamera::grab()
 /*************/
 bool RgbdCamera::isReady() const
 {
-    return true;
+    return _ready;
 }
 
 /*************/

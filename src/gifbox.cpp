@@ -120,11 +120,10 @@ void GifBox::run()
     {
         auto frameBegin = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-        // Do camera stuff
-        _camera->grab();
-
-        if (_camera)
+        if (_camera->isReady())
         {
+            _camera->grab();
+
             _camera->setWhiteBalance(_state.balanceRed, _state.balanceGreen, _state.balanceBlue);
             cv::Mat depthMask = _camera->retrieveDepthMask();
 
@@ -170,11 +169,6 @@ void GifBox::run()
                     //}
                 }
             }
-        }
-        else
-        {
-            auto rgbFrame = _camera->retrieveRGB();
-            cv::imshow("Raw Frame", rgbFrame);
         }
 
         // Handle HTTP requests
