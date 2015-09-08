@@ -1,0 +1,38 @@
+Gifbox Engine
+=============
+
+License
+-------
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.
+
+Authors
+-------
+* Emmanuel Durand <emmanueldurand@gmail.com>
+
+Projet URL
+----------
+https://github.com/paperManu/gifbox
+
+
+Installation
+------------
+This is a very rough installation guide for Ubuntu 14.04 or a derived distribution.
+First, install basic development packages, and a few libraries:
+  sudo apt-get install build-essential git-core cmake automake libtool libboost-all-dev libfreenect-dev
+
+Then install OpenCV 3.0:
+  git clone http://github.com/Itseez/opencv.git
+  cd opencv
+  mkdir build && cd build
+  cmake -DCMAKE_BUILD_TYPE ..
+  make && sudo make install
+  sudo ldconfig
+
+We have everything we need. Go back to the Gifbox directory and do:
+  ./autogen.sh && ./configure
+  make && sudo make install
+
+
+Sponsors
+--------
+This project is funded by the ONF / NFB Canada.

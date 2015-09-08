@@ -30,7 +30,6 @@
 #include "./httpServer.h"
 #include "./layerMerger.h"
 #include "./rgbdCamera.h"
-#include "./stereoCamera.h"
 #include "./v4l2output.h"
 #include "./values.h"
 
