@@ -27,6 +27,7 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
         return {};
     }
 
+    auto frameSize = layers[0].size();
     cv::Mat mergeResult = layers[0].clone();
 
     for (unsigned int i = 1; i < layers.size(); ++i)
@@ -34,10 +35,10 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
         cv::Mat tmpLayer = layers[i].clone();
         cv::Mat tmpAlpha = masks[i - 1];
 
-        if (layers[i].size() != layers[0].size())
-            cv::resize(layers[i], tmpLayer, layers[0].size(), cv::INTER_LINEAR);
-        if (masks[i - 1].size() != layers[0].size())
-            cv::resize(masks[i - 1], tmpAlpha, layers[0].size(), cv::INTER_LINEAR);
+        if (layers[i].size() != frameSize)
+            cv::resize(layers[i], tmpLayer, frameSize, cv::INTER_LINEAR);
+        if (masks[i - 1].size() != frameSize)
+            cv::resize(masks[i - 1], tmpAlpha, frameSize, cv::INTER_LINEAR);
 
         cv::Mat alpha;
         cv::cvtColor(tmpAlpha, alpha, cv::COLOR_GRAY2BGR);
@@ -69,17 +70,23 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 
     _mergeResult = mergeResult.clone();
 
-    // Add the red dot after having saved the image
     if (_saveMergerResult)
     {
+        // Add the red dot if recording
         cv::Mat tmpLayer = _recordRedDot.clone();
         cv::Mat layer;
 
-        if (tmpLayer.size() != layers[0].size())
-            cv::resize(tmpLayer, layer, layers[0].size(), cv::INTER_LINEAR);
+        if (tmpLayer.size() != frameSize)
+            cv::resize(tmpLayer, layer, frameSize, cv::INTER_LINEAR);
+
+        // Add a record progress bar
+        auto lowerLeft = cv::Point(0, frameSize.height);
+        auto upperRight = cv::Point((frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height - 16);
+        cv::rectangle(tmpLayer, lowerLeft, upperRight, cv::Scalar(255, 0, 0));
 
         mergeResult += layer;
     }
+
 
     return mergeResult;
 }
@@ -144,5 +151,5 @@ void LayerMerger::convertSequenceToGif()
     char* argv[] = {(char*)"convertToGif", (char*)basename.c_str(), nullptr};
 
     int pid;
-    int status = posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
+    posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
 }
