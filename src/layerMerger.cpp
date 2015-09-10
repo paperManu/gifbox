@@ -80,9 +80,10 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
             cv::resize(tmpLayer, layer, frameSize, cv::INTER_LINEAR);
 
         // Add a record progress bar
-        auto lowerLeft = cv::Point(0, frameSize.height);
-        auto upperRight = cv::Point((frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height - 16);
-        cv::rectangle(tmpLayer, lowerLeft, upperRight, cv::Scalar(255, 0, 0));
+        // The frame is inverted, we draw it from the other side
+        auto lowerLeft = cv::Point(frameSize.width, frameSize.height - 16);
+        auto upperRight = cv::Point(frameSize.width - (frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height);
+        cv::rectangle(layer, lowerLeft, upperRight, cv::Scalar(255, 64, 64), CV_FILLED);
 
         mergeResult += layer;
     }
