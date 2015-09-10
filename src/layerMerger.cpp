@@ -109,8 +109,9 @@ bool LayerMerger::saveFrame()
             _saveMergerResult = false;
             _saveImageIndex = 0;
             convertSequenceToGif();
-            return true;
         }
+
+        return true;
     }
 
     return false;

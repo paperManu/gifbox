@@ -153,7 +153,7 @@ void GifBox::run()
                                                                        {cameraMaskBG, frameMask[0], cameraMaskFG});
 
                     // Flash the image if the previous frame was saved
-                    if (frameSaved && !recordEnded)
+                    if (recordEnded && frameSaved)
                         finalImage *= 2.0;
 
                     cv::Mat finalImageFlipped;
