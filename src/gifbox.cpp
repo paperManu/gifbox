@@ -142,7 +142,8 @@ void GifBox::run()
 
                     // If we just changed frame in the film, we save the previous merge result
                     bool recordEnded = false;
-                    if (_films[0].hasChangedFrame())
+                    bool frameSaved = _films[0].hasChangedFrame();
+                    if (frameSaved)
                         recordEnded = _layerMerger->saveFrame();
 
                     cv::Mat cameraMaskBG, cameraMaskFG;
@@ -150,6 +151,10 @@ void GifBox::run()
                     cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY_INV);
                     auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], rgbFrame, frame[0], rgbFrame},
                                                                        {cameraMaskBG, frameMask[0], cameraMaskFG});
+
+                    // Flash the image if the previous frame was saved
+                    if (frameSaved && !recordEnded)
+                        finalImage *= 2.0;
 
                     cv::Mat finalImageFlipped;
                     cv::flip(finalImage, finalImageFlipped, 1);
