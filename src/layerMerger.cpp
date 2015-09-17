@@ -14,9 +14,6 @@ using namespace std;
 LayerMerger::LayerMerger()
 {
     _maxRecordTime = numeric_limits<unsigned int>::max();
-    
-    string filename = "red_dot.png";
-    _recordRedDot = cv::imread(filename, cv::IMREAD_COLOR);
 }
 
 /*************/
@@ -73,15 +70,9 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 
     if (_saveMergerResult)
     {
-        // Add the red dot if recording
-        cv::Mat tmpLayer = _recordRedDot.clone();
-        cv::Mat layer;
-
-        if (tmpLayer.size() != frameSize)
-            cv::resize(tmpLayer, layer, frameSize, cv::INTER_LINEAR);
-
         // Add a record progress bar
         // The frame is inverted, we draw it from the other side
+        cv::Mat layer(frameSize, CV_8UC3);
         auto lowerLeft = cv::Point(frameSize.width, frameSize.height - 16);
         auto upperRight = cv::Point(frameSize.width - (frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height);
         cv::rectangle(layer, lowerLeft, upperRight, cv::Scalar(255, 64, 64), CV_FILLED);
