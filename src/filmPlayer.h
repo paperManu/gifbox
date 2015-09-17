@@ -47,12 +47,13 @@ class FilmPlayer
         // Get the current frame based on time and fps. The first one also updates the frameChanged status
         std::vector<cv::Mat>& getCurrentFrame();
         std::vector<cv::Mat>& getCurrentMask() {return _masks[_lastIndex];}
+        int getFrameNbr() {return _frameNbr;}
         bool hasChangedFrame();
 
     private:
         std::string _path {};
-        int _frameNbr {0};
-        int _planeNbr {0};
+        uint32_t _frameNbr {0};
+        uint32_t _planeNbr {0};
         float _fps {10.f};
 
         bool _ready {false};

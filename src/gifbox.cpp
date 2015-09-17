@@ -209,7 +209,10 @@ void GifBox::run()
                 _state.record = _layerMerger->isRecording();
                 if (!_state.record)
                 {
-                    _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+                    if (_state.recordTimeMax == -1)
+                        _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _films[0].getFrameNbr());
+                    else
+                        _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
                     _state.record = true;
                 }
                 message.second(true, {"Default reply"});
@@ -287,7 +290,10 @@ void GifBox::processKeyEvent(short key)
         _state.record = _layerMerger->isRecording();
         if (!_state.record)
         {
-            _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+            if (_state.recordTimeMax == -1)
+                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _films[0].getFrameNbr());
+            else
+                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
             _state.record = true;
             cv::waitKey(1000);
             //this_thread::sleep_for(chrono::seconds(1));
