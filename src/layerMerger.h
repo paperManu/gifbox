@@ -33,7 +33,12 @@ class LayerMerger
         LayerMerger();
 
         // Get the name of the latest recorded gif
-        std::string getLastRecord() {return _lastRecordName;}
+        std::string getLastRecord()
+        {
+            auto name = _lastRecordName;
+            _lastRecordName = "";
+            return name;
+        }
 
         // Layers from back to front, with one mask between each of them
         // Everything is resized to the size of the first layer

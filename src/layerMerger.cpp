@@ -3,6 +3,7 @@
 #include <iostream>
 #include <limits>
 #include <spawn.h>
+#include <wait.h>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
@@ -154,4 +155,5 @@ void LayerMerger::convertSequenceToGif()
 
     int pid;
     posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
+    //waitpid(pid, nullptr, 0);
 }
