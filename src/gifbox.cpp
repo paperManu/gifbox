@@ -156,9 +156,7 @@ void GifBox::run()
                     if (recordEnded && frameSaved)
                         finalImage *= 2.0;
 
-                    cv::Mat finalImageFlipped;
-                    cv::flip(finalImage, finalImageFlipped, 1);
-                    cv::imshow("Result", finalImageFlipped);
+                    cv::imshow("Result", finalImage);
 
                     // Write the result to v4l2
                     //if (_state.sendToV4l2)
@@ -167,9 +165,9 @@ void GifBox::run()
                             _v4l2Sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video" + to_string(_state.camOut)));
                         if (*_v4l2Sink)
                         {
-                            cv::Mat rgbImage;
-                            cv::cvtColor(finalImage, rgbImage, cv::COLOR_BGR2RGB);
-                            _v4l2Sink->writeToDevice(rgbImage.data, rgbImage.total() * rgbImage.elemSize());
+                            //cv::Mat rgbImage;
+                            //cv::cvtColor(finalImage, rgbImage, cv::COLOR_BGR2RGB);
+                            _v4l2Sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
                         }
                     //}
                 }
@@ -192,10 +190,12 @@ void GifBox::run()
             else if (command.command == RequestHandler::CommandId::getRecordName)
             {
                 auto name = _layerMerger->getLastRecord();
+                cout << "Saved a film in /var/tmp/" << name << ".gif" << endl;
                 message.second(true, {name});
             }
             else if (command.command == RequestHandler::CommandId::isRecording)
             {
+                // TODO: return the number of frames to the end
                 _state.record = _layerMerger->isRecording();
                 if (_state.record)
                     message.second(true, {"Recording"});
