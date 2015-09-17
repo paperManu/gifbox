@@ -706,11 +706,13 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
         for (auto& v : replyValues)
             buffer += v.asString() + " ";
         rep.content = buffer.c_str();
-        rep.headers.resize(2);
+        rep.headers.resize(3);
         rep.headers[0].name = "Content-Length";
         rep.headers[0].value = std::to_string(buffer.size());
         rep.headers[1].name = "Content-Type";
         rep.headers[1].value = "text";
+        rep.headers[2].name = "Access-Control-Allow-Origin";
+        rep.headers[2].value = "*";
     }
     else
         rep = Reply::stockReply(Reply::internal_server_error);
