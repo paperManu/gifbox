@@ -195,10 +195,12 @@ void GifBox::run()
             }
             else if (command.command == RequestHandler::CommandId::isRecording)
             {
-                // TODO: return the number of frames to the end
                 _state.record = _layerMerger->isRecording();
                 if (_state.record)
-                    message.second(true, {"Recording"});
+                {
+                    int framesLeft = _layerMerger->recordingLeft();
+                    message.second(true, {"Recording", framesLeft});
+                }
                 else
                     message.second(true, {"Not recording"});
             }

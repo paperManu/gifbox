@@ -51,6 +51,7 @@ class LayerMerger
         void setSaveMerge(bool save, std::string basename = "", int maxRecordTime =  0);
 
         bool isRecording() {return _saveMergerResult;}
+        uint32_t recordingLeft() {return _maxRecordTime - _saveImageIndex;}
 
     private:
         cv::Mat _mergeResult;
