@@ -173,6 +173,26 @@ void GifBox::run()
                 }
             }
         }
+        else
+        {
+            if (_films.size() != 0)
+            {
+                // Get current film frame
+                auto frame = _films[0].getCurrentFrame();
+                auto frameMask = _films[0].getCurrentMask();
+
+                // If we just changed frame in the film, we save the previous merge result
+                bool recordEnded = false;
+                bool frameSaved = _films[0].hasChangedFrame();
+                if (frameSaved)
+                    recordEnded = _layerMerger->saveFrame();
+
+                auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1]},
+                                                                   {});
+
+                cv::imshow("Result", finalImage);
+            }
+        }
 
         // Handle HTTP requests
         auto requestHandler = _httpServer->getRequestHandler();

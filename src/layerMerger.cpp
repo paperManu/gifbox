@@ -77,10 +77,13 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
         cv::Mat logo;
         if (tmpMat.size() != frameSize)
             cv::resize(tmpMat, logo, frameSize, cv::INTER_LINEAR);
-        mergeResult += logo * 0.35;
-
-        _mergeResult = mergeResult.clone();
+        else
+            logo = tmpMat;
+        logo = logo * 0.35;
+        mergeResult += logo;
     }
+
+    _mergeResult = mergeResult.clone();
 
     if (_saveMergerResult)
     {
