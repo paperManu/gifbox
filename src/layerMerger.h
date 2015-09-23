@@ -32,17 +32,29 @@ class LayerMerger
     public:
         LayerMerger();
 
+        // Get the name of the latest recorded gif
+        std::string getLastRecord()
+        {
+            auto name = _lastRecordName;
+            _lastRecordName = "";
+            return name;
+        }
+
         // Layers from back to front, with one mask between each of them
         // Everything is resized to the size of the first layer
         cv::Mat mergeLayersWithMasks(const std::vector<cv::Mat>& layers, const std::vector<cv::Mat>& masks);
-        void saveFrame();
+
+        // Save the current merged frame, return true if sequence is complete
+        bool saveFrame();
+
+        // Activate saving
         void setSaveMerge(bool save, std::string basename = "", int maxRecordTime =  0);
 
         bool isRecording() {return _saveMergerResult;}
+        uint32_t recordingLeft() {return _maxRecordTime - _saveImageIndex;}
 
     private:
         cv::Mat _mergeResult;
-        cv::Mat _recordRedDot;
 
         std::string _saveBasename {""};
         unsigned int _saveIndex {0};
@@ -51,6 +63,13 @@ class LayerMerger
         unsigned int _saveImageIndex {0};
 
         unsigned int _maxRecordTime {0};
+        std::string _lastRecordName {""};
+
+        std::string getFilename();
+
+        // Converts the sequence to an animated gif asynchronously,
+        // by calling a script
+        void convertSequenceToGif();
 };
 
 #endif

@@ -19,29 +19,57 @@
 
 #include "gifbox.h"
 
+#include <spawn.h>
+
 using namespace std;
 
 /*************/
 void GifBox::parseArguments(int argc, char** argv)
 {
+    if (argc == 1)
+    {
+        cout << "Gifbox engine - Where the fun is assembled!" << endl;
+        cout << "Basic usage: gifengine -film FILENAME -frameNbr FRAMENBR -fps FPS" << endl;
+        cout << "Parameters:" << endl;
+        cout << "  -film: specify the name of the directory in which the film is stored" << endl;
+        cout << "  -frameNbr: set the number of frames for the given film" << endl;
+        cout << "  -fps: set the framerate" << endl;
+        cout << "  -maxRecordTime: set the maximum number of frames recorded" << endl;
+        cout << "  -out: set the output v4l2 device, defaults to 0" << endl;
+        exit(0);
+    }
     for (int i = 1; i < argc;)
     {
-        if ("-cam1" == string(argv[i]) && i < argc - 1)
-            _state.cam1 = stoi(argv[i + 1]);
-        else if ("-cam2" == string(argv[i]) && i < argc - 1)
-            _state.cam2 = stoi(argv[i + 1]);
-        else if ("-out" == string(argv[i]) && i < argc - 1)
-            _state.camOut = stoi(argv[i + 1]);
-        else if ("-film" == string(argv[i]) && i < argc - 1)
+        if ("-film" == string(argv[i]) && i < argc - 1)
+        {
             _state.currentFilm = string(argv[i + 1]);
+            ++i;
+        }
         else if ("-frameNbr" == string(argv[i]) && i < argc - 1)
+        {
             _state.frameNbr = stoi(argv[i + 1]);
+            ++i;
+        }
         else if ("-fps" == string(argv[i]) && i < argc - 1)
+        {
             _state.fps = stof(argv[i + 1]);
-        else if ("-bgLearningTime" == string(argv[i]) && i < argc - 1)
-            _state.bgLearningTime = stof(argv[i + 1]);
+            ++i;
+        }
         else if ("-maxRecordTime" == string(argv[i]) && i < argc - 1)
+        {
             _state.recordTimeMax = stoi(argv[i + 1]);
+            ++i;
+        }
+        else if ("-out" == string(argv[i]) && i < argc - 1)
+        {
+            _state.camOut = stoi(argv[i + 1]);
+            ++i;
+        }
+        else
+        {
+            cout << "Unrecognized argument: " << argv[i] << endl;
+        }
+
         ++i;
     }
 }
@@ -92,20 +120,19 @@ void GifBox::run()
     {
         auto frameBegin = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 
-        // Do camera stuff
-        _camera->grab();
-
-        if (_camera)
+        if (_camera->isReady())
         {
+            _camera->grab();
+
             _camera->setWhiteBalance(_state.balanceRed, _state.balanceGreen, _state.balanceBlue);
             cv::Mat depthMask = _camera->retrieveDepthMask();
 
             auto rgbFrame = _camera->retrieveRGB();
-            cv::imshow("RGB Camera", rgbFrame);
+            //cv::imshow("RGB Camera", rgbFrame);
 
             if (depthMask.rows > 0 && depthMask.cols > 0)
             {
-                cv::imshow("depthMask", depthMask);
+                //cv::imshow("depthMask", depthMask);
 
                 if (_films.size() != 0)
                 {
@@ -114,8 +141,10 @@ void GifBox::run()
                     auto frameMask = _films[0].getCurrentMask();
 
                     // If we just changed frame in the film, we save the previous merge result
-                    if (_films[0].hasChangedFrame())
-                        _layerMerger->saveFrame();
+                    bool recordEnded = false;
+                    bool frameSaved = _films[0].hasChangedFrame();
+                    if (frameSaved)
+                        recordEnded = _layerMerger->saveFrame();
 
                     cv::Mat cameraMaskBG, cameraMaskFG;
                     cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY_INV);
@@ -123,25 +152,26 @@ void GifBox::run()
                     auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], rgbFrame, frame[0], rgbFrame},
                                                                        {cameraMaskBG, frameMask[0], cameraMaskFG});
 
-                    cv::Mat finalImageFlipped;
-                    cv::flip(finalImage, finalImageFlipped, 1);
-                    cv::imshow("Result", finalImageFlipped);
+                    // Flash the image if the previous frame was saved
+                    if (recordEnded && frameSaved)
+                        finalImage *= 2.0;
+
+                    cv::imshow("Result", finalImage);
 
                     // Write the result to v4l2
-                    if (_state.sendToV4l2)
-                    {
+                    //if (_state.sendToV4l2)
+                    //{
                         if (!_v4l2Sink || finalImage.rows != _v4l2Sink->getHeight() || finalImage.cols != _v4l2Sink->getWidth())
                             _v4l2Sink = unique_ptr<V4l2Output>(new V4l2Output(finalImage.cols, finalImage.rows, "/dev/video" + to_string(_state.camOut)));
                         if (*_v4l2Sink)
+                        {
+                            //cv::Mat rgbImage;
+                            //cv::cvtColor(finalImage, rgbImage, cv::COLOR_BGR2RGB);
                             _v4l2Sink->writeToDevice(finalImage.data, finalImage.total() * finalImage.elemSize());
-                    }
+                        }
+                    //}
                 }
             }
-        }
-        else
-        {
-            auto rgbFrame = _camera->retrieveRGB();
-            cv::imshow("Raw Frame", rgbFrame);
         }
 
         // Handle HTTP requests
@@ -155,14 +185,64 @@ void GifBox::run()
             if (command.command == RequestHandler::CommandId::quit)
             {
                 _state.run = false;
+                message.second(true, {"Default reply"});
+            }
+            else if (command.command == RequestHandler::CommandId::getRecordName)
+            {
+                auto name = _layerMerger->getLastRecord();
+                cout << "Saved a film in /var/tmp/" << name << ".gif" << endl;
+                message.second(true, {name});
+            }
+            else if (command.command == RequestHandler::CommandId::isRecording)
+            {
+                _state.record = _layerMerger->isRecording();
+                if (_state.record)
+                {
+                    int framesLeft = _layerMerger->recordingLeft();
+                    message.second(true, {"Recording", framesLeft});
+                }
+                else
+                    message.second(true, {"Not recording"});
             }
             else if (command.command == RequestHandler::CommandId::record)
             {
                 _state.record = _layerMerger->isRecording();
                 if (!_state.record)
                 {
-                    _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+                    if (_state.recordTimeMax == -1)
+                        _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _films[0].getFrameNbr());
+                    else
+                        _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
                     _state.record = true;
+                }
+                message.second(true, {"Default reply"});
+            }
+            else if (command.command == RequestHandler::CommandId::setFilm)
+            {
+                if (command.args.size() < 4)
+                {
+                    message.second(true, {"Need to specify film name, frame number and framerate"});
+                }
+                else
+                {
+                    auto filename = command.args[1].asString();
+                    int frameNbr = command.args[2].asInt();
+                    float frameRate = command.args[3].asFloat();
+                    FilmPlayer film("./films/" + filename + "/", frameNbr, 2, frameRate);
+                    if (film)
+                    {
+                        _films.clear();
+                        _films.push_back(film);
+                        _films[0].start();
+                        _state.currentFilm = filename;
+                        _state.frameNbr = frameNbr;
+                        _state.fps = frameRate;
+                        message.second(true, {"Success"});
+                    }
+                    else
+                    {
+                        message.second(true, {"Failed"});
+                    }
                 }
             }
             else if (command.command == RequestHandler::CommandId::stop)
@@ -170,13 +250,13 @@ void GifBox::run()
                 _layerMerger->setSaveMerge(false);
                 _state.sendToV4l2 = false;
                 _state.record = false;
+                message.second(true, {"Default reply"});
             }
             else if (command.command == RequestHandler::CommandId::start)
             {
                 _state.sendToV4l2 = true;
+                message.second(true, {"Default reply"});
             }
-
-            message.second(true, {"Default reply"});
         }
 
         // Handle keyboard
@@ -210,14 +290,19 @@ void GifBox::processKeyEvent(short key)
         _state.record = _layerMerger->isRecording();
         if (!_state.record)
         {
-            _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
+            if (_state.recordTimeMax == -1)
+                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _films[0].getFrameNbr());
+            else
+                _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
             _state.record = true;
+            cv::waitKey(1000);
+            //this_thread::sleep_for(chrono::seconds(1));
         }
-        else
-        {
-            _layerMerger->setSaveMerge(false);
-            _state.record = false;
-        }
+        //else
+        //{
+        //    _layerMerger->setSaveMerge(false);
+        //    _state.record = false;
+        //}
         break;
     case 'c': // enable calibration
         _camera->activateCalibration();

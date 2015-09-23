@@ -5,26 +5,35 @@ using namespace std;
 /*************/
 RgbdCamera::RgbdCamera()
 {
-    _camera = &_freenectCtx.createDevice<FreenectCamera>(0);
-    _camera->startVideo();
-    _camera->startDepth();
+    try
+    {
+        _camera = &_freenectCtx.createDevice<FreenectCamera>(0);
+        _camera->startVideo();
+        _camera->startDepth();
 
-    auto depthFormat = FREENECT_DEPTH_REGISTERED;
-    _camera->setDepthFormat(depthFormat);
+        auto depthFormat = FREENECT_DEPTH_REGISTERED;
+        _camera->setDepthFormat(depthFormat);
 
-    // Prepare filters
-    _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10));
-    _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
-    _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
-    _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 4, false);
+        // Prepare filters
+        _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10));
+        _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
+        _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
+        _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 4, false);
+
+        _ready = true;
+    }
+    catch (...)
+    {
+        _ready = false;
+    }
 }
 
 /*************/
 RgbdCamera::~RgbdCamera()
 {
-    _camera->stopVideo();
-    _camera->stopDepth();
-    _freenectCtx.deleteDevice(0);
+    //_camera->stopVideo();
+    //_camera->stopDepth();
+    //_freenectCtx.deleteDevice(0);
 }
 
 /*************/
@@ -48,7 +57,6 @@ bool RgbdCamera::grab()
         cv::morphologyEx(fgMask, fgMask, cv::MORPH_DILATE, _dilateElement);
         fgMask = 255 - fgMask;
         unknownMask += fgMask;
-        cv::imshow("test", fgMask);
         _depthMask = _depthMask + unknownMask;
         
         cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);
@@ -60,7 +68,7 @@ bool RgbdCamera::grab()
 /*************/
 bool RgbdCamera::isReady() const
 {
-    return true;
+    return _ready;
 }
 
 /*************/

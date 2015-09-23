@@ -187,7 +187,10 @@ class RequestHandler
         enum CommandId
         {
             nop,
+            getRecordName,
+            isRecording,
             record,
+            setFilm,
             start,
             stop,
             quit

@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <limits>
+#include <spawn.h>
+#include <wait.h>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
@@ -12,9 +14,6 @@ using namespace std;
 LayerMerger::LayerMerger()
 {
     _maxRecordTime = numeric_limits<unsigned int>::max();
-    
-    string filename = "red_dot.png";
-    _recordRedDot = cv::imread(filename, cv::IMREAD_COLOR);
 }
 
 /*************/
@@ -26,6 +25,7 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
         return {};
     }
 
+    auto frameSize = layers[0].size();
     cv::Mat mergeResult = layers[0].clone();
 
     for (unsigned int i = 1; i < layers.size(); ++i)
@@ -33,10 +33,10 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
         cv::Mat tmpLayer = layers[i].clone();
         cv::Mat tmpAlpha = masks[i - 1];
 
-        if (layers[i].size() != layers[0].size())
-            cv::resize(layers[i], tmpLayer, layers[0].size(), cv::INTER_LINEAR);
-        if (masks[i - 1].size() != layers[0].size())
-            cv::resize(masks[i - 1], tmpAlpha, layers[0].size(), cv::INTER_LINEAR);
+        if (layers[i].size() != frameSize)
+            cv::resize(layers[i], tmpLayer, frameSize, cv::INTER_LINEAR);
+        if (masks[i - 1].size() != frameSize)
+            cv::resize(masks[i - 1], tmpAlpha, frameSize, cv::INTER_LINEAR);
 
         cv::Mat alpha;
         cv::cvtColor(tmpAlpha, alpha, cv::COLOR_GRAY2BGR);
@@ -66,36 +66,33 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
             }
     }
 
-    _mergeResult = mergeResult;
+    _mergeResult = mergeResult.clone();
 
-    // Add the red dot after having saved the image
     if (_saveMergerResult)
     {
-        cv::Mat tmpLayer = _recordRedDot.clone();
-        cv::Mat layer;
-
-        if (tmpLayer.size() != layers[0].size())
-            cv::resize(tmpLayer, layer, layers[0].size(), cv::INTER_LINEAR);
+        // Add a record progress bar
+        // The frame is inverted, we draw it from the other side
+        cv::Mat layer(frameSize, CV_8UC3);
+        auto lowerLeft = cv::Point(frameSize.width, frameSize.height - 16);
+        auto upperRight = cv::Point(frameSize.width - (frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height);
+        cv::rectangle(layer, lowerLeft, upperRight, cv::Scalar(255, 64, 64), CV_FILLED);
 
         mergeResult += layer;
     }
+
 
     return mergeResult;
 }
 
 /*************/
-void LayerMerger::saveFrame()
+bool LayerMerger::saveFrame()
 {
     if (_mergeResult.total() == 0)
-        return;
+        return false;
 
     if (_saveMergerResult)
     {
-        string filename;
-        if (_saveImageIndex < 10)
-            filename = _saveBasename + "_" + to_string(_saveIndex) + "_0" + to_string(_saveImageIndex) + ".png";
-        else
-            filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
+        auto filename = getFilename();
         cv::imwrite(filename, _mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
@@ -103,8 +100,13 @@ void LayerMerger::saveFrame()
         {
             _saveMergerResult = false;
             _saveImageIndex = 0;
+            convertSequenceToGif();
         }
+
+        return true;
     }
+
+    return false;
 }
 
 /*************/
@@ -121,4 +123,28 @@ void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
         _maxRecordTime = numeric_limits<unsigned int>::max();
     else
         _maxRecordTime = maxRecordTime;
+}
+
+/*************/
+string LayerMerger::getFilename()
+{
+    string filename;
+    if (_saveImageIndex < 10)
+        filename = _saveBasename + "_" + to_string(_saveIndex) + "_0" + to_string(_saveImageIndex) + ".png";
+    else
+        filename = _saveBasename + "_" + to_string(_saveIndex) + "_" + to_string(_saveImageIndex) + ".png";
+    return filename;
+}
+
+/*************/
+void LayerMerger::convertSequenceToGif()
+{
+    auto basename = "gifbox_result_" + to_string(_saveIndex);
+    _lastRecordName = basename;
+    string cmd = "convertToGif";
+    char* argv[] = {(char*)"convertToGif", (char*)basename.c_str(), nullptr};
+
+    int pid;
+    posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
+    //waitpid(pid, nullptr, 0);
 }

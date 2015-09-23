@@ -666,10 +666,16 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
 
     if (requestPath.find("/camera/start") == 0)
         _commandQueue.push_back({CommandId::start, requestArgs});
-    else if (requestPath.find("/camera/record") == 0)
+    else if (requestPath.find("/getRecordName") == 0)
+        _commandQueue.push_back({CommandId::getRecordName, requestArgs});
+    else if (requestPath.find("/isRecording") == 0)
+        _commandQueue.push_back({CommandId::isRecording, requestArgs});
+    else if (requestPath.find("/record") == 0)
         _commandQueue.push_back({CommandId::record, requestArgs});
-    else if (requestPath.find("/camera/stop") == 0)
+    else if (requestPath.find("/stopRecording") == 0)
         _commandQueue.push_back({CommandId::stop, requestArgs});
+    else if (requestPath.find("/setFilm") == 0)
+        _commandQueue.push_back({CommandId::setFilm, requestArgs});
     else if (requestPath.find("/quit") == 0)
         _commandQueue.push_back({CommandId::quit, requestArgs});
     else
@@ -684,9 +690,9 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
     Values replyValues {};
 
     auto replyFunc = [&](bool reply, Values answer) -> void {
-        cv.notify_all();
         replyState = reply;
         replyValues = answer;
+        cv.notify_all();
     };
 
     _commandReturnFuncQueue.push_back(replyFunc);
@@ -700,11 +706,13 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
         for (auto& v : replyValues)
             buffer += v.asString() + " ";
         rep.content = buffer.c_str();
-        rep.headers.resize(2);
+        rep.headers.resize(3);
         rep.headers[0].name = "Content-Length";
         rep.headers[0].value = std::to_string(buffer.size());
         rep.headers[1].name = "Content-Type";
         rep.headers[1].value = "text";
+        rep.headers[2].name = "Access-Control-Allow-Origin";
+        rep.headers[2].value = "*";
     }
     else
         rep = Reply::stockReply(Reply::internal_server_error);
