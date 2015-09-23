@@ -102,7 +102,7 @@ GifBox::GifBox(int argc, char** argv)
         _films[0].start();
 
     // Load camera
-    _camera = unique_ptr<RgbdCamera>(new RgbdCamera());
+    _camera = unique_ptr<K2Camera>(new K2Camera());
 
     // And the layer merger
     _layerMerger = unique_ptr<LayerMerger>(new LayerMerger());
