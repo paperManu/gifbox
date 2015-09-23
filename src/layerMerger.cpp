@@ -14,6 +14,10 @@ using namespace std;
 LayerMerger::LayerMerger()
 {
     _maxRecordTime = numeric_limits<unsigned int>::max();
+
+    _logoONF = cv::imread("logoONF.png", cv::IMREAD_COLOR);
+    if (_logoONF.total() == 0)
+        cout << "LayerMerger: could not load logo file logoONF.png" << endl;
 }
 
 /*************/
@@ -66,7 +70,17 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
             }
     }
 
-    _mergeResult = mergeResult.clone();
+    // Add the logo
+    if (_logoONF.total() > 0)
+    {
+        cv::Mat tmpMat = _logoONF.clone();
+        cv::Mat logo;
+        if (tmpMat.size() != frameSize)
+            cv::resize(tmpMat, logo, frameSize, cv::INTER_LINEAR);
+        mergeResult += logo * 0.35;
+
+        _mergeResult = mergeResult.clone();
+    }
 
     if (_saveMergerResult)
     {
