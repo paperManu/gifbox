@@ -30,7 +30,7 @@ K2Camera::K2Camera()
         // Run the kinect thread
         _continueGrab = true;
         _grabThread = thread([&]() {
-            libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Depth);
+            libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
             libfreenect2::FrameMap frames;
             libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4);
 
@@ -52,8 +52,9 @@ K2Camera::K2Camera()
                 registration->apply(rgb, depth, &undistorted, &registered);
 
                 unique_lock<mutex> lock(_grabMutex);
-                _rgbMap = cv::Mat(cv::Size(rgb->height, rgb->width), CV_8UC4, rgb->data);
-                _depthMap = cv::Mat(cv::Size(depth->height, depth->width), CV_32F, depth->data);
+                _rgbMap = cv::Mat(cv::Size(registered.width, registered.height), CV_8UC4, registered.data).clone();
+                cv::cvtColor(_rgbMap, _rgbMap, cv::COLOR_RGBA2RGB);
+                _depthMap = cv::Mat(cv::Size(depth->width, depth->height), CV_32F, depth->data).clone();
 
                 if (_depthMap.rows && _depthMap.cols)
                 {
@@ -74,11 +75,12 @@ K2Camera::K2Camera()
                     cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);
                 }
 
+                _ready = true;
+
                 listener.release(frames);
             }
         });
 
-        _ready = true;
     }
     catch (...)
     {

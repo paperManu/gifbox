@@ -124,10 +124,10 @@ void GifBox::run()
         {
             _camera->grab();
 
-            _camera->setWhiteBalance(_state.balanceRed, _state.balanceGreen, _state.balanceBlue);
             cv::Mat depthMask = _camera->retrieveDepthMask();
 
             auto rgbFrame = _camera->retrieveRGB();
+            cv::resize(rgbFrame, rgbFrame, cv::Size(720, 480), cv::INTER_LINEAR);
             //cv::imshow("RGB Camera", rgbFrame);
 
             if (depthMask.rows > 0 && depthMask.cols > 0)

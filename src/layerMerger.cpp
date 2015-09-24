@@ -97,7 +97,6 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
         mergeResult += layer;
     }
 
-
     return mergeResult;
 }
 
