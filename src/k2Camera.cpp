@@ -1,5 +1,7 @@
 #include "k2Camera.h"
 
+#include <chrono>
+
 using namespace std;
 
 /*************/
@@ -79,6 +81,9 @@ K2Camera::K2Camera()
 
                 listener.release(frames);
             }
+
+            _device->stop();
+            _device->close();
         });
 
     }
@@ -91,10 +96,8 @@ K2Camera::K2Camera()
 /*************/
 K2Camera::~K2Camera()
 {
-    _device->stop();
-    _device->close();
-
     _continueGrab = false;
+
     if (_grabThread.joinable())
         _grabThread.join();
 }

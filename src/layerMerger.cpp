@@ -21,6 +21,11 @@ LayerMerger::LayerMerger()
 }
 
 /*************/
+LayerMerger::~LayerMerger()
+{
+}
+
+/*************/
 cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const vector<cv::Mat>& masks)
 {
     if (layers.size() != masks.size() + 1)

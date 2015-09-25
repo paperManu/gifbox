@@ -31,6 +31,7 @@ class LayerMerger
 {
     public:
         LayerMerger();
+        ~LayerMerger();
 
         // Get the name of the latest recorded gif
         std::string getLastRecord()
