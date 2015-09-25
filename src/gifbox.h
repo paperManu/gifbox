@@ -29,8 +29,9 @@
 #include "./filmPlayer.h"
 #include "./httpServer.h"
 #include "./layerMerger.h"
-#include "./rgbdCamera.h"
+//#include "./rgbdCamera.h"
 #include "./v4l2output.h"
+#include "./k2Camera.h"
 #include "./values.h"
 
 /*************/
@@ -73,7 +74,7 @@ class GifBox
         std::thread _httpServerThread;
         std::vector<FilmPlayer> _films;
         //std::unique_ptr<StereoCamera> _stereoCamera;
-        std::unique_ptr<RgbdCamera> _camera;
+        std::unique_ptr<K2Camera> _camera;
         std::unique_ptr<V4l2Output> _v4l2Sink;
         std::unique_ptr<LayerMerger> _layerMerger;
 

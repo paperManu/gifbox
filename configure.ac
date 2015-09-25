@@ -33,6 +33,11 @@ if test "x${have_freenect}" = "xfalse" ; then
     AC_MSG_ERROR([Missing libfreenect])
 fi
 
+PKG_CHECK_MODULES([FREENECT2], [freenect2])
+if test "x${have_freenect2}" = "xfalse" ; then
+    AC_MSG_ERROR([Missing libfreenect2])
+fi
+
 # Boost:
 BOOST_REQUIRE([1.50])
 BOOST_ASIO

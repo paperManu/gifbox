@@ -36,6 +36,7 @@ class FilmPlayer
 {
     public:
         FilmPlayer(std::string path, int frameNbr, int planeNbr, float fps = 10.f);
+        ~FilmPlayer();
 
         explicit operator bool() const
         {

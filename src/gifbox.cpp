@@ -102,7 +102,7 @@ GifBox::GifBox(int argc, char** argv)
         _films[0].start();
 
     // Load camera
-    _camera = unique_ptr<RgbdCamera>(new RgbdCamera());
+    _camera = unique_ptr<K2Camera>(new K2Camera());
 
     // And the layer merger
     _layerMerger = unique_ptr<LayerMerger>(new LayerMerger());
@@ -124,10 +124,10 @@ void GifBox::run()
         {
             _camera->grab();
 
-            _camera->setWhiteBalance(_state.balanceRed, _state.balanceGreen, _state.balanceBlue);
             cv::Mat depthMask = _camera->retrieveDepthMask();
 
             auto rgbFrame = _camera->retrieveRGB();
+            cv::resize(rgbFrame, rgbFrame, cv::Size(720, 480), cv::INTER_LINEAR);
             //cv::imshow("RGB Camera", rgbFrame);
 
             if (depthMask.rows > 0 && depthMask.cols > 0)
