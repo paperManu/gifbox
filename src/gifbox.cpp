@@ -65,6 +65,10 @@ void GifBox::parseArguments(int argc, char** argv)
             _state.camOut = stoi(argv[i + 1]);
             ++i;
         }
+        else if ("-hide" == string(argv[i]))
+        {
+            _state.show = false;
+        }
         else
         {
             cout << "Unrecognized argument: " << argv[i] << endl;
@@ -127,13 +131,10 @@ void GifBox::run()
             cv::Mat depthMask = _camera->retrieveDepthMask();
 
             auto rgbFrame = _camera->retrieveRGB();
-            cv::resize(rgbFrame, rgbFrame, cv::Size(720, 480), cv::INTER_LINEAR);
-            //cv::imshow("RGB Camera", rgbFrame);
+            //cv::imshow("img", rgbFrame);
 
             if (depthMask.rows > 0 && depthMask.cols > 0)
             {
-                //cv::imshow("depthMask", depthMask);
-
                 if (_films.size() != 0)
                 {
                     // Get current film frame
@@ -156,7 +157,8 @@ void GifBox::run()
                     if (recordEnded && frameSaved)
                         finalImage *= 2.0;
 
-                    cv::imshow("Result", finalImage);
+                    if (_state.show)
+                        cv::imshow("Result", finalImage);
 
                     // Write the result to v4l2
                     //if (_state.sendToV4l2)
@@ -190,7 +192,8 @@ void GifBox::run()
                 auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1]},
                                                                    {});
 
-                cv::imshow("Result", finalImage);
+                if (_state.show)
+                    cv::imshow("Result", finalImage);
             }
         }
 

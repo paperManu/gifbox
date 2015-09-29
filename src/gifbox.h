@@ -47,10 +47,11 @@ class GifBox
         struct State
         {
             bool run {true};
+            bool show {true};
             bool sendToV4l2 {false};
 
             bool record {false};
-            int recordTimeMax {120};
+            int recordTimeMax {-1};
         
             int cam1 {1};
             int cam2 {2};

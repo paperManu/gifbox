@@ -10,10 +10,13 @@ K2Camera::K2Camera()
     try
     {
         // Prepare filters
-        _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(10, 10));
-        _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
-        _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
-        _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 4, false);
+        _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
+        _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+        _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+        _bgSubtractor = cv::createBackgroundSubtractorMOG2(1000, 2, false);
+        //_bgSubtractor->setVarThreshold(2);
+        //_bgSubtractor->setVarThresholdGen(4);
+        //_bgSubtractor->setDetectShadows(false);
 
         // Connect to the Kinect2
         libfreenect2::setGlobalLogger(libfreenect2::createConsoleLogger(libfreenect2::Logger::Debug));
@@ -44,6 +47,7 @@ K2Camera::K2Camera()
             cout << "K2Camera: device firmware version is " << _device->getFirmwareVersion() << endl;
 
             auto registration = unique_ptr<libfreenect2::Registration>(new libfreenect2::Registration(_device->getIrCameraParams(), _device->getColorCameraParams()));
+            auto bgMat = cv::Mat();
 
             while (_continueGrab)
             {
@@ -67,7 +71,7 @@ K2Camera::K2Camera()
                     cv::Mat unknownMask;
                     cv::threshold(_depthMask, unknownMask, 1, 255, cv::THRESH_BINARY_INV);
                     cv::Mat fgMask;
-                    _bgSubtractor->apply(_depthMask, fgMask, 0.00001);
+                    _bgSubtractor->apply(_depthMask, fgMask, 0.0000001);
                     cv::morphologyEx(fgMask, fgMask, cv::MORPH_ERODE, _erodeElement);
                     cv::morphologyEx(fgMask, fgMask, cv::MORPH_DILATE, _dilateElement);
                     fgMask = 255 - fgMask;

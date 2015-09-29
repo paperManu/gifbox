@@ -90,17 +90,17 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
 
     _mergeResult = mergeResult.clone();
 
-    if (_saveMergerResult)
-    {
-        // Add a record progress bar
-        // The frame is inverted, we draw it from the other side
-        cv::Mat layer = cv::Mat::zeros(frameSize, CV_8UC3);
-        auto lowerLeft = cv::Point(frameSize.width, frameSize.height - 16);
-        auto upperRight = cv::Point(frameSize.width - (frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height);
-        cv::rectangle(layer, lowerLeft, upperRight, cv::Scalar(255, 64, 64), CV_FILLED);
+    //if (_saveMergerResult)
+    //{
+    //    // Add a record progress bar
+    //    // The frame is inverted, we draw it from the other side
+    //    cv::Mat layer = cv::Mat::zeros(frameSize, CV_8UC3);
+    //    auto lowerLeft = cv::Point(frameSize.width, frameSize.height - 16);
+    //    auto upperRight = cv::Point(frameSize.width - (frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height);
+    //    cv::rectangle(layer, lowerLeft, upperRight, cv::Scalar(255, 64, 64), CV_FILLED);
 
-        mergeResult += layer;
-    }
+    //    mergeResult += layer;
+    //}
 
     return mergeResult;
 }
@@ -114,7 +114,9 @@ bool LayerMerger::saveFrame()
     if (_saveMergerResult)
     {
         auto filename = getFilename();
-        cv::imwrite(filename, _mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
+        cv::Mat resizedImage;
+        cv::resize(_mergeResult, resizedImage, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+        cv::imwrite(filename, resizedImage, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
         if (_saveImageIndex >= _maxRecordTime)
