@@ -13,7 +13,7 @@ K2Camera::K2Camera()
         _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
         _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
         _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
-        _bgSubtractor = cv::createBackgroundSubtractorMOG2(1000, 2, false);
+        _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 16, false);
         //_bgSubtractor->setVarThreshold(2);
         //_bgSubtractor->setVarThresholdGen(4);
         //_bgSubtractor->setDetectShadows(false);
@@ -33,6 +33,7 @@ K2Camera::K2Camera()
         _device = unique_ptr<libfreenect2::Freenect2Device>(_freenect2.openDevice(serial, _pipeline.get()));
 
         // Run the kinect thread
+        auto updateFrameNumber = 0;
         _continueGrab = true;
         _grabThread = thread([&]() {
             libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
@@ -71,7 +72,13 @@ K2Camera::K2Camera()
                     cv::Mat unknownMask;
                     cv::threshold(_depthMask, unknownMask, 1, 255, cv::THRESH_BINARY_INV);
                     cv::Mat fgMask;
-                    _bgSubtractor->apply(_depthMask, fgMask, 0.0000001);
+
+                    // The background is updated only during the first few frames
+                    if (updateFrameNumber++ < 500)
+                        _bgSubtractor->apply(_depthMask, fgMask, -1.0);
+                    else
+                        _bgSubtractor->apply(_depthMask, fgMask, 0.0);
+
                     cv::morphologyEx(fgMask, fgMask, cv::MORPH_ERODE, _erodeElement);
                     cv::morphologyEx(fgMask, fgMask, cv::MORPH_DILATE, _dilateElement);
                     fgMask = 255 - fgMask;
