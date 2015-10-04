@@ -10,7 +10,7 @@ K2Camera::K2Camera()
     try
     {
         // Prepare filters
-        _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(7, 7));
+        _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
         _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
         _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
         _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 16, false);
@@ -86,6 +86,29 @@ K2Camera::K2Camera()
                     _depthMask = _depthMask + unknownMask;
                     
                     cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);
+
+                    // Detect the contours, delete smaller ones
+                    vector<vector<cv::Point>> contours;
+                    vector<cv::Vec4i> hierarchy;
+                    cv::findContours(_depthMask, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
+                    // We draw only the outter contours and the first level below them
+                    cv::Mat contourMask = cv::Mat::zeros(_depthMask.size(), CV_8U);
+                    for (unsigned int i = 0; i < contours.size(); ++i)
+                    {
+                        if (hierarchy[i][3] < 0 && cv::contourArea(contours[i]) > 32)
+                        {
+                            cv::drawContours(contourMask, contours, i, cv::Scalar(255, 255, 255), cv::FILLED, cv::LINE_8);
+
+                            unsigned int child = hierarchy[i][2];
+                            while (child >= 0)
+                            {
+                                if (cv::contourArea(contours[child]) > 32)
+                                    cv::drawContours(contourMask, contours, child, cv::Scalar(0, 0, 0), cv::FILLED, cv::LINE_8);
+                                child = hierarchy[child][1];
+                            }
+                        }
+                    }
+                    _depthMask = contourMask;
                 }
 
                 _ready = true;
