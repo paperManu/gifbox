@@ -45,6 +45,11 @@ void GifBox::parseArguments(int argc, char** argv)
             _state.currentFilm = string(argv[i + 1]);
             ++i;
         }
+        else if ("-flashMargin" == string(argv[i]) && i < argc - 1)
+        {
+            _state.flashMargin = stoi(argv[i + 1]);
+            ++i;
+        }
         else if ("-frameNbr" == string(argv[i]) && i < argc - 1)
         {
             _state.frameNbr = stoi(argv[i + 1]);
@@ -153,9 +158,15 @@ void GifBox::run()
                     auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], rgbFrame, frame[0], rgbFrame},
                                                                        {cameraMaskBG, frameMask[0], cameraMaskFG});
 
-                    // Flash the image if the previous frame was saved
-                    // if (recordEnded && frameSaved)
-                    //     finalImage *= 2.0;
+                    // Flash the borders of the image if the previous frame was saved
+                    if (recordEnded && frameSaved)
+                    {
+                        int margin = _state.flashMargin;
+                        cv::Mat imageRegion = cv::Mat(finalImage, cv::Rect(margin, margin, finalImage.rows - margin * 2, finalImage.cols - margin * 2));
+                        cv::Mat regionCopy = imageRegion.clone();
+                        finalImage *= 2.0;
+                        regionCopy.copyTo(imageRegion);
+                    }
 
                     if (_state.show)
                         cv::imshow("Result", finalImage);
@@ -184,10 +195,9 @@ void GifBox::run()
                 auto frameMask = _films[0].getCurrentMask();
 
                 // If we just changed frame in the film, we save the previous merge result
-                bool recordEnded = false;
                 bool frameSaved = _films[0].hasChangedFrame();
                 if (frameSaved)
-                    recordEnded = _layerMerger->saveFrame();
+                    _layerMerger->saveFrame();
 
                 auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1]},
                                                                    {});
@@ -319,13 +329,7 @@ void GifBox::processKeyEvent(short key)
                 _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
             _state.record = true;
             cv::waitKey(1000);
-            //this_thread::sleep_for(chrono::seconds(1));
         }
-        //else
-        //{
-        //    _layerMerger->setSaveMerge(false);
-        //    _state.record = false;
-        //}
         break;
     case 'c': // enable calibration
         _camera->activateCalibration();
@@ -351,30 +355,6 @@ void GifBox::processKeyEvent(short key)
     case 'k': // FG backward
         _state.bgLimit--;
         cout << "Background: " << _state.bgLimit << endl;
-        break;
-    case 't': // WB Blue
-        _state.balanceBlue += 0.05f;
-        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
-        break;
-    case 'g': // WB Blue
-        _state.balanceBlue -= 0.05f;
-        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
-        break;
-    case 'r': // WB Green
-        _state.balanceGreen += 0.05f;
-        cout << "White balance red / green / blue : " << _state.balanceGreen << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
-        break;
-    case 'f': // WB Green
-        _state.balanceGreen -= 0.05f;
-        cout << "White balance red / green / blue : " << _state.balanceGreen << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
-        break;
-    case 'e': // WB Red
-        _state.balanceRed += 0.05f;
-        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
-        break;
-    case 'd': // WB Red
-        _state.balanceRed -= 0.05f;
-        cout << "White balance red / green / blue : " << _state.balanceRed << " / " << _state.balanceGreen << " / " << _state.balanceBlue << endl;
         break;
     }
 }

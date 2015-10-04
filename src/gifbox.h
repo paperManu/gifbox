@@ -64,11 +64,7 @@ class GifBox
             int fgLimit {30};
             int bgLimit {45};
         
-            float bgLearningTime {0.001};
-        
-            float balanceRed {1.f};
-            float balanceGreen {1.f};
-            float balanceBlue {1.f};
+            int flashMargin {16};
         } _state;
 
         std::unique_ptr<HttpServer> _httpServer;
