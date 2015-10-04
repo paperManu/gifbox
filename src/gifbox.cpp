@@ -154,8 +154,8 @@ void GifBox::run()
                                                                        {cameraMaskBG, frameMask[0], cameraMaskFG});
 
                     // Flash the image if the previous frame was saved
-                    if (recordEnded && frameSaved)
-                        finalImage *= 2.0;
+                    // if (recordEnded && frameSaved)
+                    //     finalImage *= 2.0;
 
                     if (_state.show)
                         cv::imshow("Result", finalImage);
