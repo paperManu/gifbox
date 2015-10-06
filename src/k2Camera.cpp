@@ -110,7 +110,7 @@ K2Camera::K2Camera()
                     unknownMask += fgMask;
                     _depthMask = _depthMask + unknownMask;
                     
-                    cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);
+                    //cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);
                 }
 
                 _ready = true;
