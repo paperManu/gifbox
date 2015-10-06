@@ -113,6 +113,12 @@ K2Camera::K2Camera()
                     //cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);
                 }
 
+                // Crop inside the depth and RGB images
+                int topMargin = 16;
+                int bottomMargin = 32;
+                _rgbMap = cv::Mat(_rgbMap, cv::Rect(0, topMargin, _rgbMap.cols, _rgbMap.rows - topMargin - bottomMargin));
+                _depthMask = cv::Mat(_depthMask, cv::Rect(0, topMargin, _depthMask.cols, _depthMask.rows - topMargin - bottomMargin));
+
                 _ready = true;
 
                 listener.release(frames);
