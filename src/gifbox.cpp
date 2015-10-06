@@ -162,7 +162,7 @@ void GifBox::run()
                     if (recordEnded && frameSaved)
                     {
                         int margin = _state.flashMargin;
-                        cv::Mat imageRegion = cv::Mat(finalImage, cv::Rect(margin, margin, finalImage.rows - margin * 2, finalImage.cols - margin * 2));
+                        cv::Mat imageRegion = cv::Mat(finalImage, cv::Rect(margin, margin, finalImage.cols - margin * 2, finalImage.rows - margin * 2));
                         cv::Mat regionCopy = imageRegion.clone();
                         finalImage *= 2.0;
                         regionCopy.copyTo(imageRegion);
