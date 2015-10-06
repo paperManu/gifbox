@@ -28,11 +28,6 @@ PKG_CHECK_MODULES([OPENCV], [opencv >= 3.0],
     AC_DEFINE([HAVE_OPENCV], [0], [Defined to 1 if OpenCV is detected]))
 AM_CONDITIONAL(HAVE_OPENCV, test -n "$OPENCV_LIBS")
 
-PKG_CHECK_MODULES([FREENECT], [libfreenect])
-if test "x${have_freenect}" = "xfalse" ; then
-    AC_MSG_ERROR([Missing libfreenect])
-fi
-
 PKG_CHECK_MODULES([FREENECT2], [freenect2])
 if test "x${have_freenect2}" = "xfalse" ; then
     AC_MSG_ERROR([Missing libfreenect2])
