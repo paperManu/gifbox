@@ -33,7 +33,6 @@ K2Camera::K2Camera()
         _device = unique_ptr<libfreenect2::Freenect2Device>(_freenect2.openDevice(serial, _pipeline.get()));
 
         // Run the kinect thread
-        auto updateFrameNumber = 0;
         _continueGrab = true;
         _grabThread = thread([&]() {
             libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color | libfreenect2::Frame::Ir | libfreenect2::Frame::Depth);
@@ -49,6 +48,8 @@ K2Camera::K2Camera()
 
             auto registration = unique_ptr<libfreenect2::Registration>(new libfreenect2::Registration(_device->getIrCameraParams(), _device->getColorCameraParams()));
             auto bgMat = cv::Mat();
+
+            auto updateFrameNumber = 0;
 
             while (_continueGrab)
             {
