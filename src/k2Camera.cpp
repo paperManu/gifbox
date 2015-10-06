@@ -11,8 +11,8 @@ K2Camera::K2Camera()
     {
         // Prepare filters
         _closeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
-        _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
-        _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(3, 3));
+        _dilateElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
+        _erodeElement = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(5, 5));
         _bgSubtractor = cv::createBackgroundSubtractorMOG2(500, 16, false);
         //_bgSubtractor->setVarThreshold(2);
         //_bgSubtractor->setVarThresholdGen(4);
@@ -62,8 +62,32 @@ K2Camera::K2Camera()
                 unique_lock<mutex> lock(_grabMutex);
                 _rgbMap = cv::Mat(cv::Size(registered.width, registered.height), CV_8UC4, registered.data).clone();
                 cv::cvtColor(_rgbMap, _rgbMap, cv::COLOR_RGBA2RGB);
-                _depthMap = cv::Mat(cv::Size(depth->width, depth->height), CV_32F, depth->data).clone();
+                
+                // Process the RGB image to remove holes
+                if (_rgbMap.total() != 0)
+                {
+                    cv::Mat rgbMask = cv::Mat(_rgbMap.size(), CV_8U);
+                    cv::cvtColor(_rgbMap, rgbMask, cv::COLOR_RGB2GRAY);
+                    cv::threshold(rgbMask, rgbMask, 1, 255, cv::THRESH_BINARY_INV);
 
+                    cv::Mat rgbDilated = _rgbMap.clone();
+                    cv::morphologyEx(rgbDilated, rgbDilated, cv::MORPH_DILATE, _dilateElement, cv::Point(), 3);
+
+                    for (int y = 0; y < _rgbMap.rows; ++y)
+                        for (int x = 0; x < _rgbMap.cols; ++x)
+                        {
+                            unsigned char maskValue = rgbMask.at<unsigned char>(y, x);
+                            if (maskValue > 0)
+                            {
+                                _rgbMap.at<cv::Vec3b>(y, x)[0] = rgbDilated.at<cv::Vec3b>(y, x)[0];
+                                _rgbMap.at<cv::Vec3b>(y, x)[1] = rgbDilated.at<cv::Vec3b>(y, x)[1];
+                                _rgbMap.at<cv::Vec3b>(y, x)[2] = rgbDilated.at<cv::Vec3b>(y, x)[2];
+                            }
+                        }
+                }
+
+                // Process the depth map to convert tu 8U
+                _depthMap = cv::Mat(cv::Size(depth->width, depth->height), CV_32F, depth->data).clone();
                 if (_depthMap.rows && _depthMap.cols)
                 {
                     if (!_depthMask.rows && !_depthMask.cols)
@@ -87,29 +111,6 @@ K2Camera::K2Camera()
                     _depthMask = _depthMask + unknownMask;
                     
                     cv::morphologyEx(_depthMask, _depthMask, cv::MORPH_OPEN, _closeElement);
-
-                    // Detect the contours, delete smaller ones
-                    vector<vector<cv::Point>> contours;
-                    vector<cv::Vec4i> hierarchy;
-                    cv::findContours(_depthMask, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
-                    // We draw only the outter contours and the first level below them
-                    cv::Mat contourMask = cv::Mat::zeros(_depthMask.size(), CV_8U);
-                    for (unsigned int i = 0; i < contours.size(); ++i)
-                    {
-                        if (hierarchy[i][3] < 0 && cv::contourArea(contours[i]) > 32)
-                        {
-                            cv::drawContours(contourMask, contours, i, cv::Scalar(255, 255, 255), cv::FILLED, cv::LINE_8);
-
-                            unsigned int child = hierarchy[i][2];
-                            while (child >= 0)
-                            {
-                                if (cv::contourArea(contours[child]) > 32)
-                                    cv::drawContours(contourMask, contours, child, cv::Scalar(0, 0, 0), cv::FILLED, cv::LINE_8);
-                                child = hierarchy[child][1];
-                            }
-                        }
-                    }
-                    _depthMask = contourMask;
                 }
 
                 _ready = true;
