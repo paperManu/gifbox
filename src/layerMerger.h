@@ -72,6 +72,9 @@ class LayerMerger
         // Converts the sequence to an animated gif asynchronously,
         // by calling a script
         void convertSequenceToGif();
+
+        // Plays a sound by invoking vlc
+        void playSound(std::string filename);
 };
 
 #endif

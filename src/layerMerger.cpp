@@ -171,3 +171,13 @@ void LayerMerger::convertSequenceToGif()
     posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
     //waitpid(pid, nullptr, 0);
 }
+
+/*************/
+void LayerMerger::playSound(string filename)
+{
+    string cmd = "vlc";
+    char* argv[] = {(char*)"vlc", (char*)"--play-and-exit", (char*)filename.c_str(), nullptr};
+
+    int pid;
+    posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
+}
