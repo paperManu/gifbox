@@ -119,8 +119,6 @@ bool LayerMerger::saveFrame()
         cv::imwrite(filename, resizedImage, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
-        playSound("flash.wav");
-
         if (_saveImageIndex >= _maxRecordTime)
         {
             _saveMergerResult = false;
@@ -143,6 +141,8 @@ void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
     _saveMergerResult = save;
     _saveBasename = basename;
     _saveImageIndex = 0;
+
+    playSound("flash.wav");
 
     if (maxRecordTime == 0)
         _maxRecordTime = numeric_limits<unsigned int>::max();
