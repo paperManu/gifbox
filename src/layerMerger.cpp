@@ -119,6 +119,8 @@ bool LayerMerger::saveFrame()
         cv::imwrite(filename, resizedImage, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
+        playSound("flash.wav");
+
         if (_saveImageIndex >= _maxRecordTime)
         {
             _saveMergerResult = false;
@@ -175,9 +177,10 @@ void LayerMerger::convertSequenceToGif()
 /*************/
 void LayerMerger::playSound(string filename)
 {
-    string cmd = "vlc";
-    char* argv[] = {(char*)"vlc", (char*)"--play-and-exit", (char*)filename.c_str(), nullptr};
+    string cmd = "/usr/bin/cvlc";
+    char* argv[] = {(char*)"cvlc", (char*)"--play-and-exit", (char*)"--no-loop", (char*)"flash.wav", nullptr};
+    char* env[] = {(char*)"DISPLAY=:0.0", nullptr};
 
     int pid;
-    posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
+    posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, env);
 }
