@@ -242,6 +242,7 @@ void GifBox::run()
                 _state.record = _layerMerger->isRecording();
                 if (!_state.record)
                 {
+                    _films[0].start(); // This restarts the film
                     if (_state.recordTimeMax == -1)
                         _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _films[0].getFrameNbr());
                     else
@@ -323,12 +324,13 @@ void GifBox::processKeyEvent(short key)
         _state.record = _layerMerger->isRecording();
         if (!_state.record)
         {
+            _films[0].start(); // This restarts the film
             if (_state.recordTimeMax == -1)
                 _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _films[0].getFrameNbr());
             else
                 _layerMerger->setSaveMerge(true, "/tmp/gifbox_result", _state.recordTimeMax);
             _state.record = true;
-            cv::waitKey(1000);
+            cv::waitKey(50);
         }
         break;
     case 'c': // enable calibration
