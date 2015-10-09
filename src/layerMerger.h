@@ -67,6 +67,8 @@ class LayerMerger
         unsigned int _maxRecordTime {0};
         std::string _lastRecordName {""};
 
+        int _currentVLCPid {-1};
+
         std::string getFilename();
 
         // Converts the sequence to an animated gif asynchronously,
@@ -75,6 +77,7 @@ class LayerMerger
 
         // Plays a sound by invoking vlc
         void playSound(std::string filename);
+        void killSound();
 };
 
 #endif

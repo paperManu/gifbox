@@ -2,7 +2,10 @@
 
 #include <iostream>
 #include <limits>
+
+#include <signal.h>
 #include <spawn.h>
+#include <sys/types.h>
 #include <wait.h>
 
 #include <opencv2/imgcodecs.hpp>
@@ -124,6 +127,8 @@ bool LayerMerger::saveFrame()
             _saveMergerResult = false;
             _saveImageIndex = 0;
             convertSequenceToGif();
+
+            killSound();
         }
 
         return true;
@@ -177,10 +182,21 @@ void LayerMerger::convertSequenceToGif()
 /*************/
 void LayerMerger::playSound(string filename)
 {
+    if (_currentVLCPid != -1)
+        killSound();
+
     string cmd = "/usr/bin/cvlc";
-    char* argv[] = {(char*)"cvlc", (char*)"--play-and-exit", (char*)"--no-loop", (char*)"flash.wav", nullptr};
+    char* argv[] = {(char*)"cvlc", (char*)"--play-and-exit", (char*)"--loop", (char*)"flash.wav", nullptr};
     char* env[] = {(char*)"DISPLAY=:0.0", nullptr};
 
-    int pid;
-    posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, env);
+    posix_spawn(&_currentVLCPid, cmd.c_str(), nullptr, nullptr, argv, env);
+}
+
+/*************/
+void LayerMerger::killSound()
+{
+    if (_currentVLCPid == 0)
+        return; // Safeguard...
+
+    kill(_currentVLCPid, SIGTERM);
 }
