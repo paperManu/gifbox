@@ -2,7 +2,10 @@
 
 #include <iostream>
 #include <limits>
+
+#include <signal.h>
 #include <spawn.h>
+#include <sys/types.h>
 #include <wait.h>
 
 #include <opencv2/imgcodecs.hpp>
@@ -14,6 +17,15 @@ using namespace std;
 LayerMerger::LayerMerger()
 {
     _maxRecordTime = numeric_limits<unsigned int>::max();
+
+    _logoONF = cv::imread("logoONF.png", cv::IMREAD_COLOR);
+    if (_logoONF.total() == 0)
+        cout << "LayerMerger: could not load logo file logoONF.png" << endl;
+}
+
+/*************/
+LayerMerger::~LayerMerger()
+{
 }
 
 /*************/
@@ -66,20 +78,32 @@ cv::Mat LayerMerger::mergeLayersWithMasks(const vector<cv::Mat>& layers, const v
             }
     }
 
-    _mergeResult = mergeResult.clone();
-
-    if (_saveMergerResult)
+    // Add the logo
+    if (_logoONF.total() > 0)
     {
-        // Add a record progress bar
-        // The frame is inverted, we draw it from the other side
-        cv::Mat layer(frameSize, CV_8UC3);
-        auto lowerLeft = cv::Point(frameSize.width, frameSize.height - 16);
-        auto upperRight = cv::Point(frameSize.width - (frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height);
-        cv::rectangle(layer, lowerLeft, upperRight, cv::Scalar(255, 64, 64), CV_FILLED);
-
-        mergeResult += layer;
+        cv::Mat tmpMat = _logoONF.clone();
+        cv::Mat logo;
+        if (tmpMat.size() != frameSize)
+            cv::resize(tmpMat, logo, frameSize, cv::INTER_LINEAR);
+        else
+            logo = tmpMat;
+        logo = logo * 0.35;
+        mergeResult += logo;
     }
 
+    _mergeResult = mergeResult.clone();
+
+    //if (_saveMergerResult)
+    //{
+    //    // Add a record progress bar
+    //    // The frame is inverted, we draw it from the other side
+    //    cv::Mat layer = cv::Mat::zeros(frameSize, CV_8UC3);
+    //    auto lowerLeft = cv::Point(frameSize.width, frameSize.height - 16);
+    //    auto upperRight = cv::Point(frameSize.width - (frameSize.width * _saveImageIndex) / _maxRecordTime, frameSize.height);
+    //    cv::rectangle(layer, lowerLeft, upperRight, cv::Scalar(255, 64, 64), CV_FILLED);
+
+    //    mergeResult += layer;
+    //}
 
     return mergeResult;
 }
@@ -93,7 +117,9 @@ bool LayerMerger::saveFrame()
     if (_saveMergerResult)
     {
         auto filename = getFilename();
-        cv::imwrite(filename, _mergeResult, {cv::IMWRITE_PNG_COMPRESSION, 9});
+        cv::Mat resizedImage;
+        cv::resize(_mergeResult, resizedImage, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+        cv::imwrite(filename, resizedImage, {cv::IMWRITE_PNG_COMPRESSION, 9});
         _saveImageIndex++;
 
         if (_saveImageIndex >= _maxRecordTime)
@@ -101,6 +127,8 @@ bool LayerMerger::saveFrame()
             _saveMergerResult = false;
             _saveImageIndex = 0;
             convertSequenceToGif();
+
+            killSound();
         }
 
         return true;
@@ -118,6 +146,8 @@ void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
     _saveMergerResult = save;
     _saveBasename = basename;
     _saveImageIndex = 0;
+
+    playSound("flash.wav");
 
     if (maxRecordTime == 0)
         _maxRecordTime = numeric_limits<unsigned int>::max();
@@ -147,4 +177,26 @@ void LayerMerger::convertSequenceToGif()
     int pid;
     posix_spawn(&pid, cmd.c_str(), nullptr, nullptr, argv, nullptr);
     //waitpid(pid, nullptr, 0);
+}
+
+/*************/
+void LayerMerger::playSound(string filename)
+{
+    if (_currentVLCPid != -1)
+        killSound();
+
+    string cmd = "/usr/bin/cvlc";
+    char* argv[] = {(char*)"cvlc", (char*)"--play-and-exit", (char*)"--loop", (char*)"flash.wav", nullptr};
+    char* env[] = {(char*)"DISPLAY=:0.0", nullptr};
+
+    posix_spawn(&_currentVLCPid, cmd.c_str(), nullptr, nullptr, argv, env);
+}
+
+/*************/
+void LayerMerger::killSound()
+{
+    if (_currentVLCPid == 0)
+        return; // Safeguard...
+
+    kill(_currentVLCPid, SIGTERM);
 }

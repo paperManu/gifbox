@@ -68,6 +68,11 @@ FilmPlayer::FilmPlayer(string path, int frameNbr, int planeNbr, float fps)
 }
 
 /*************/
+FilmPlayer::~FilmPlayer()
+{
+}
+
+/*************/
 void FilmPlayer::start()
 {
     _startTime = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now().time_since_epoch());

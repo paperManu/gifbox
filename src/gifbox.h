@@ -29,8 +29,9 @@
 #include "./filmPlayer.h"
 #include "./httpServer.h"
 #include "./layerMerger.h"
-#include "./rgbdCamera.h"
+//#include "./rgbdCamera.h"
 #include "./v4l2output.h"
+#include "./k2Camera.h"
 #include "./values.h"
 
 /*************/
@@ -46,10 +47,11 @@ class GifBox
         struct State
         {
             bool run {true};
+            bool show {true};
             bool sendToV4l2 {false};
 
             bool record {false};
-            int recordTimeMax {120};
+            int recordTimeMax {-1};
         
             int cam1 {1};
             int cam2 {2};
@@ -62,18 +64,14 @@ class GifBox
             int fgLimit {30};
             int bgLimit {45};
         
-            float bgLearningTime {0.001};
-        
-            float balanceRed {1.f};
-            float balanceGreen {1.f};
-            float balanceBlue {1.f};
+            int flashMargin {16};
         } _state;
 
         std::unique_ptr<HttpServer> _httpServer;
         std::thread _httpServerThread;
         std::vector<FilmPlayer> _films;
         //std::unique_ptr<StereoCamera> _stereoCamera;
-        std::unique_ptr<RgbdCamera> _camera;
+        std::unique_ptr<K2Camera> _camera;
         std::unique_ptr<V4l2Output> _v4l2Sink;
         std::unique_ptr<LayerMerger> _layerMerger;
 

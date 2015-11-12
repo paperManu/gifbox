@@ -31,6 +31,7 @@ class LayerMerger
 {
     public:
         LayerMerger();
+        ~LayerMerger();
 
         // Get the name of the latest recorded gif
         std::string getLastRecord()
@@ -55,6 +56,7 @@ class LayerMerger
 
     private:
         cv::Mat _mergeResult;
+        cv::Mat _logoONF;
 
         std::string _saveBasename {""};
         unsigned int _saveIndex {0};
@@ -65,11 +67,17 @@ class LayerMerger
         unsigned int _maxRecordTime {0};
         std::string _lastRecordName {""};
 
+        int _currentVLCPid {-1};
+
         std::string getFilename();
 
         // Converts the sequence to an animated gif asynchronously,
         // by calling a script
         void convertSequenceToGif();
+
+        // Plays a sound by invoking vlc
+        void playSound(std::string filename);
+        void killSound();
 };
 
 #endif
