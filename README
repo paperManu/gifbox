@@ -18,7 +18,7 @@ Installation
 ------------
 This is a very rough installation guide for Ubuntu 14.04 or a derived distribution.
 First, install basic development packages, and a few libraries:
-  sudo apt-get install build-essential git-core cmake automake libtool libboost-all-dev libfreenect-dev
+  sudo apt-get install build-essential git-core cmake automake libtool libboost-all-dev
 
 Then install OpenCV 3.0:
   git clone http://github.com/Itseez/opencv.git
@@ -27,6 +27,17 @@ Then install OpenCV 3.0:
   cmake -DCMAKE_BUILD_TYPE ..
   make && sudo make install
   sudo ldconfig
+  cd ..
+
+As well as libfreenect2:
+    git clone https://github.com/OpenKinect/libfreenect2
+    cd libfreenect2/depends
+    ./install_ubuntu.sh
+    cd ..
+    mkdir build && cd build
+    cmake .. && make && sudo make install
+    sudo ldconfig
+    cd ../..
 
 We have everything we need. Go back to the Gifbox directory and do:
   ./autogen.sh && ./configure
@@ -35,4 +46,4 @@ We have everything we need. Go back to the Gifbox directory and do:
 
 Sponsors
 --------
-This project is funded by the ONF / NFB Canada.
+This project was funded by the ONF / NFB Canada.

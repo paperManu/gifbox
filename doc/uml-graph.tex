@@ -1,0 +1,106 @@
+%
+% Compilation of the examples from the TikZ-UML manual, v. 1.0b (2013-03-01)
+% http://www.ensta-paristech.fr/~kielbasi/tikzuml/index.php?lang=en
+%
+\documentclass[landscape,12pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8x]{inputenc}
+\usepackage[french]{babel}
+\usepackage{fullpage}
+
+\usepackage{tikz-uml}
+
+\sloppy
+\hyphenpenalty 10000000
+
+\title{\textbf{Gifbox} \\ Diagramme de classes}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+Ce document présente de manière succinte l'architecture de l'engin de la Gifbox, chargé de la capture vidéo, de la lecture des films ainsi que du mélange de ces deux sources. Le diagramme UML qui suit n'est pas complet pour des questions de lisibilité, mais présente les principales méthodes ainsi que les relations entre les classes.
+
+\section{Description des classes}
+\begin{itemize}
+    \item Gifbox : classe de base de l'engin, gérant la boucle principale ainsi que l'ensemble des paramètres,
+    \item FilmPlayer : lit les différentes couches des films,
+    \item K2Camera : capture le flux vidéo et de profondeur de la Kinect2,
+    \item LayerMerger : mélange les films et la capture vidéo selon le masque de cette dernière,
+    \item HttpServer : serveur HTTP permettant à l'interface web de communiquer avec l'engin,
+    \item RequestHandler : objet prenant en charge une commande reçue par le serveur HTTP,
+    \item V4L2Output : sortie vidéo dans une caméra virtuelle compatible Video4Linux, lisible par l'interface web.
+\end{itemize}
+
+
+\begin{center}
+\begin{tikzpicture}
+\begin{umlpackage}{Gifbox - Engine}
+
+\umlclass[x=-5, y=0]{Gifbox}{}{
+    + run() : void
+}
+
+\umlclass[x=-5, y=3.5]{FilmPlayer}{}{
+    + operator bool() : bool \\
+    + start() : void \\
+    + getCurrentFrame() : vector<Mat> \\
+    + getCurrentMask() : vector<Mat> \\
+    + getFrameNbr() : int \\
+    + hasChangedFrame() : bool
+}
+
+\umlclass[x=10, y=0]{HttpServer}{}{
+    + run() : void \\
+    + stop() : void \\
+    + getRequestHandler() : RequestHandler*
+}
+
+\umlclass[x=10, y=4]{RequestHandler}{}{
+    + handleRequest(request, reply) : void \\
+    + getNextCommand() : pair<Command, ReturnFunction>
+}
+
+\umlclass[x=-5, y=-4]{LayerMerger}{}{
+    + mergeLayersWithMasks(layers, masks) : Mat \\
+    + saveFrame() : bool \\
+    + setSaveMerge(save, name, recordTime) : void \\
+    + isRecording() : bool \\
+    + recordingLeft() : int \\
+    - convertSequenceToGif() \\
+    - playSound(filename) \\
+    - killSound()
+}
+
+\umlclass[x=4, y=-6]{V4L2Output}{}{\
+    + operator bool() : bool \\
+    + writeToDevice(data, size) : bool \\
+    + getWidth() : int \\
+    + getHeight() : int
+}
+
+\umlclass[x=11, y=-4]{K2Camera}{}{
+    + isReady() : bool \\
+    + grab() : bool \\
+    + retrieveRGB() : Mat \\
+    + retrieveDisparity() : Mat \\
+    + retrieveDepthMask() : Mat
+}
+
+\umlaggreg[]{Gifbox}{FilmPlayer}
+\umlaggreg[anchor1=5]{Gifbox}{HttpServer}
+\umldep[geometry=-|-, weight=0.4, anchor1=15]{Gifbox}{RequestHandler}
+\umlaggreg[]{HttpServer}{RequestHandler}
+\umlaggreg[]{Gifbox}{LayerMerger}
+\umlaggreg[geometry=-|-, weight=0.55, anchor1=-15]{Gifbox}{V4L2Output}
+\umlaggreg[geometry=-|-, anchor1=-5]{Gifbox}{K2Camera}
+
+\end{umlpackage}
+
+\end{tikzpicture}
+\end{center}
+
+\end{document}
