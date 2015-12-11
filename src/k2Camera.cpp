@@ -1,6 +1,10 @@
 #include "k2Camera.h"
 
 #include <chrono>
+#include <random>
+
+#define WALL_RANDOM_MAX 4
+#define WALL_RANDOM_WIDTH 64
 
 using namespace std;
 
@@ -51,6 +55,10 @@ K2Camera::K2Camera()
 
             auto updateFrameNumber = 0;
 
+            random_device randomDevice;
+            default_random_engine randomEngine(randomDevice());
+            uniform_int_distribution<int> uniformDist(-WALL_RANDOM_MAX, WALL_RANDOM_MAX);
+
             while (_continueGrab)
             {
                 listener.waitForNewFrame(frames);
@@ -100,7 +108,23 @@ K2Camera::K2Camera()
 
                     // The background is updated only during the first few frames
                     if (updateFrameNumber++ < 500)
+                    {
+                        // Add noise on the horizontal borders to prevent issues with walls
+                        for (int y = 0; y < _depthMask.rows; ++y)
+                        {
+                            for (int x = 0; x < _depthMask.cols; ++x)
+                            {
+                                if (x < WALL_RANDOM_WIDTH || x > _depthMask.cols - WALL_RANDOM_WIDTH)
+                                {
+                                    int v = _depthMask.at<uint8_t>(y, x);
+                                    v = std::max(0, std::min(255, v + uniformDist(randomEngine)));
+                                    _depthMask.at<uint8_t>(y, x) = v;
+                                }
+                            }
+                        }
+
                         _bgSubtractor->apply(_depthMask, fgMask, -1.0);
+                    }
                     else
                         _bgSubtractor->apply(_depthMask, fgMask, 0.0);
 
