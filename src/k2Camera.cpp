@@ -3,7 +3,7 @@
 #include <chrono>
 #include <random>
 
-#define WALL_RANDOM_MAX 4
+#define WALL_RANDOM_STDDEV 4
 #define WALL_RANDOM_WIDTH 64
 
 using namespace std;
@@ -56,8 +56,8 @@ K2Camera::K2Camera()
             auto updateFrameNumber = 0;
 
             random_device randomDevice;
-            default_random_engine randomEngine(randomDevice());
-            uniform_int_distribution<int> uniformDist(-WALL_RANDOM_MAX, WALL_RANDOM_MAX);
+            mt19937 randomEngine(randomDevice());
+            normal_distribution<> normalDist(10, WALL_RANDOM_STDDEV);
 
             while (_continueGrab)
             {
@@ -117,7 +117,7 @@ K2Camera::K2Camera()
                                 if (x < WALL_RANDOM_WIDTH || x > _depthMask.cols - WALL_RANDOM_WIDTH)
                                 {
                                     int v = _depthMask.at<uint8_t>(y, x);
-                                    v = std::max(0, std::min(255, v + uniformDist(randomEngine)));
+                                    v = std::max(0, std::min(255, v + (int)normalDist(randomEngine) - 10));
                                     _depthMask.at<uint8_t>(y, x) = v;
                                 }
                             }
