@@ -147,7 +147,7 @@ void LayerMerger::setSaveMerge(bool save, string basename, int maxRecordTime)
     _saveBasename = basename;
     _saveImageIndex = 0;
 
-    playSound("flash.wav");
+    playSound("Super8.wav");
 
     if (maxRecordTime == 0)
         _maxRecordTime = numeric_limits<unsigned int>::max();
@@ -186,7 +186,7 @@ void LayerMerger::playSound(string filename)
         killSound();
 
     string cmd = "/usr/bin/cvlc";
-    char* argv[] = {(char*)"cvlc", (char*)"--play-and-exit", (char*)"--loop", (char*)"flash.wav", nullptr};
+    char* argv[] = {(char*)"cvlc", (char*)"--play-and-exit", (char*)"--loop", (char*)filename.c_str(), nullptr};
     char* env[] = {(char*)"DISPLAY=:0.0", nullptr};
 
     posix_spawn(&_currentVLCPid, cmd.c_str(), nullptr, nullptr, argv, env);
