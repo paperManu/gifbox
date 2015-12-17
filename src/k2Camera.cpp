@@ -2,6 +2,8 @@
 
 #include <chrono>
 
+#define ALPHA_WALL_WIDTH 48
+
 using namespace std;
 
 /*************/
@@ -118,6 +120,18 @@ K2Camera::K2Camera()
                 int bottomMargin = 32;
                 _rgbMap = cv::Mat(_rgbMap, cv::Rect(0, topMargin, _rgbMap.cols, _rgbMap.rows - topMargin - bottomMargin));
                 _depthMask = cv::Mat(_depthMask, cv::Rect(0, topMargin, _depthMask.cols, _depthMask.rows - topMargin - bottomMargin));
+
+                // Add some alpha on the vertical border of the depth mask, to handle
+                // capture issues on the walls of the box
+                for (int32_t y = 0; y < _depthMask.rows; ++y)
+                {
+                    for (int32_t x = 0; x < ALPHA_WALL_WIDTH; ++x)
+                    {
+                        float alpha = (float)x / (float)ALPHA_WALL_WIDTH;
+                        _depthMask.at<uint8_t>(y, x) *= alpha;
+                        _depthMask.at<uint8_t>(y, _depthMask.cols - x) *= alpha;
+                    }
+                }
 
                 _ready = true;
 
