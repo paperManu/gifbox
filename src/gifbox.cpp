@@ -21,6 +21,8 @@
 
 #include <spawn.h>
 
+#define ALPHA_WALL_WIDTH 48
+
 using namespace std;
 
 /*************/
@@ -36,6 +38,7 @@ void GifBox::parseArguments(int argc, char** argv)
         cout << "  -fps: set the framerate" << endl;
         cout << "  -maxRecordTime: set the maximum number of frames recorded" << endl;
         cout << "  -out: set the output v4l2 device, defaults to 0" << endl;
+        cout << "  -gradient: set the alpha gradient width, defaults to 48" << endl;
         exit(0);
     }
     for (int i = 1; i < argc;)
@@ -68,6 +71,11 @@ void GifBox::parseArguments(int argc, char** argv)
         else if ("-out" == string(argv[i]) && i < argc - 1)
         {
             _state.camOut = stoi(argv[i + 1]);
+            ++i;
+        }
+        else if ("-gradient" == string(argv[i]) && i < argc - 1)
+        {
+            _state.alphaGradient = stoi(argv[i + 1]);
             ++i;
         }
         else if ("-hide" == string(argv[i]))
@@ -155,6 +163,22 @@ void GifBox::run()
                     cv::Mat cameraMaskBG, cameraMaskFG;
                     cv::threshold(depthMask, cameraMaskBG, _state.bgLimit, 255, cv::THRESH_BINARY_INV);
                     cv::threshold(depthMask, cameraMaskFG, _state.fgLimit, 255, cv::THRESH_BINARY_INV);
+
+                    // Add some alpha on the vertical border of the depth mask, to handle
+                    // capture issues on the walls of the box
+                    for (int32_t y = 0; y < cameraMaskBG.rows; ++y)
+                    {
+                        for (int32_t x = 0; x <_state.alphaGradient; ++x)
+                        {
+                            float alpha = (float)x / (float)ALPHA_WALL_WIDTH;
+                            cameraMaskBG.at<uint8_t>(y, x) *= alpha;
+                            cameraMaskBG.at<uint8_t>(y, cameraMaskBG.cols - x) *= alpha;
+
+                            cameraMaskFG.at<uint8_t>(y, x) *= alpha;
+                            cameraMaskFG.at<uint8_t>(y, cameraMaskFG.cols - x) *= alpha;
+                        }
+                    }
+
                     auto finalImage = _layerMerger->mergeLayersWithMasks({frame[1], rgbFrame, frame[0], rgbFrame},
                                                                        {cameraMaskBG, frameMask[0], cameraMaskFG});
 

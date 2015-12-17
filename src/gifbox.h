@@ -65,6 +65,7 @@ class GifBox
             int bgLimit {45};
         
             int flashMargin {16};
+            int alphaGradient {48};
         } _state;
 
         std::unique_ptr<HttpServer> _httpServer;
