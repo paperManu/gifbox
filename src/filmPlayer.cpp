@@ -62,9 +62,15 @@ FilmPlayer::FilmPlayer(string path, int frameNbr, int planeNbr, float fps)
     }
 
     if (_frames.size() && _frames.size() == _frameNbr)
+    {
         _ready = true;
+        cout << "FilmPlayer: successfully loaded film in path " << path << " with " << frameNbr << " frames and " << planeNbr << " planes." << endl;
+    }
     else
+    {
         _ready = false;
+        cout << "FilmPlayer: error while loading film in path " << path << endl;
+    }
 }
 
 /*************/

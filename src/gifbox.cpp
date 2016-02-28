@@ -148,6 +148,7 @@ void GifBox::run()
 
             if (depthMask.rows > 0 && depthMask.cols > 0)
             {
+                unique_lock<mutex> lock(_filmMutex);
                 if (_films.size() != 0)
                 {
                     // Get current film frame
@@ -289,8 +290,10 @@ void GifBox::run()
                     FilmPlayer film("./films/" + filename + "/", frameNbr, 2, frameRate);
                     if (film)
                     {
-                        _films.clear();
-                        _films.push_back(film);
+                        unique_lock<mutex> lock(_filmMutex);
+                        //_films.clear();
+                        //_films.push_back(film);
+                        _films[0] = film;
                         _films[0].start();
                         _state.currentFilm = filename;
                         _state.frameNbr = frameNbr;

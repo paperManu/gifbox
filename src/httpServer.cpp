@@ -686,17 +686,23 @@ void RequestHandler::handleRequest(const Request& req, Reply& rep)
     }
 
     condition_variable cv;
+    atomic_bool cvNotified {false};
     atomic_bool replyState {false};
     Values replyValues {};
 
     auto replyFunc = [&](bool reply, Values answer) -> void {
         replyState = reply;
         replyValues = answer;
-        cv.notify_all();
+        cvNotified = true;
+        cv.notify_one();
     };
 
     _commandReturnFuncQueue.push_back(replyFunc);
-    cv.wait_for(lock, chrono::milliseconds(2000));
+    while(!cvNotified)
+    {
+        if (cv.wait_for(lock, chrono::milliseconds(5000)) == cv_status::timeout)
+            break;
+    }
 
     if (replyState)
     {

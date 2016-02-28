@@ -20,6 +20,7 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -75,6 +76,8 @@ class GifBox
         std::unique_ptr<K2Camera> _camera;
         std::unique_ptr<V4l2Output> _v4l2Sink;
         std::unique_ptr<LayerMerger> _layerMerger;
+
+        std::mutex _filmMutex;
 
         void parseArguments(int argc, char** argv);
         void processKeyEvent(short key);
